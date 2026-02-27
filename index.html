@@ -37,10 +37,14 @@
         .app-header { display: flex; justify-content: flex-end; padding: 1rem 0; margin-bottom: 1rem; position: relative; z-index: 100; }
         .header-actions { display: flex; align-items: center; gap: 1.5rem; }
         
-        /* ESTADO DE CONEXIÓN (NUEVO) */
+        /* ESTADO DE CONEXIÓN */
         .status-indicator {
             width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
             background: #f3f4f6; color: #9ca3af; font-size: 1.2rem; cursor: help; transition: all 0.3s ease; border: 1px solid transparent;
+        }
+        /* Posicionamiento en Login */
+        #login-view .status-indicator {
+            position: absolute; top: 15px; right: 15px; z-index: 10;
         }
         .status-indicator.connected { background: #dcfce7; color: #16a34a; box-shadow: 0 0 0 2px #dcfce7; border-color: #86efac; }
         .status-indicator.disconnected { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
@@ -76,7 +80,11 @@
         .btn-logout:hover { background: #f3f4f6; }
 
         /* LOGIN */
-        #login-view { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); max-width: 400px; margin: 2rem auto; text-align: center; }
+        #login-view { 
+            background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
+            max-width: 400px; margin: 2rem auto; text-align: center; 
+            position: relative; 
+        }
         .input-group { margin-bottom: 1rem; text-align: left; }
         label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; }
         input, select, textarea { width: 100%; padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; }
@@ -168,6 +176,11 @@
     <div class="container">
         <!-- LOGIN -->
         <div id="login-view">
+            <!-- ICONO DE CONEXIÓN (VISIBLE DESDE EL INICIO) -->
+            <div id="connection-status" class="status-indicator disconnected" title="Estado de conexión">
+                <i class="ph ph-wifi-slash" id="connection-icon"></i>
+            </div>
+
             <i class="ph ph-buildings" style="font-size: 3rem; color: var(--primary); margin-bottom: 1rem;"></i>
             <h2 style="margin-bottom: 0.5rem;">Acceso al Sistema</h2>
             <p style="color: #666; font-size: 0.9rem; margin-bottom: 1.5rem;">Gestión de Condominio</p>
@@ -180,11 +193,6 @@
         <div id="dashboard-wrapper" class="dashboard-section">
             <header class="app-header">
                 <div class="header-actions">
-                    <!-- ICONO DE CONEXIÓN -->
-                    <div id="connection-status" class="status-indicator disconnected" title="Estado de conexión">
-                        <i class="ph ph-wifi-slash" id="connection-icon"></i>
-                    </div>
-
                     <div class="bell-container" onclick="toggleNotifications()">
                         <i class="ph ph-bell"></i>
                         <div class="badge" id="notif-badge">0</div>
@@ -202,7 +210,6 @@
                 <div class="admin-card">
                     <div class="profile-name">Panel de Administración</div>
                     
-                    <!-- BOTÓN RÁPIDO PARA ESTADO DE CUENTA -->
                     <div style="display:flex; justify-content:flex-end; margin-bottom:1rem;">
                         <button class="btn-primary" style="width:auto; margin:0; background-color: #3b82f6;" onclick="openStatementModal()">
                             <i class="ph ph-file-plus"></i> Nuevo Estado de Cuenta
@@ -283,7 +290,7 @@
                     <div id="admin-votings-list"></div>
                 </div>
 
-                <!-- 5. HISTORIAL NOTIFICACIONES (CON EDITAR Y BORRAR) -->
+                <!-- 5. HISTORIAL NOTIFICACIONES -->
                 <div class="events-table-container">
                     <div class="events-header">
                         <span>Historial de Notificaciones y Archivos</span>
@@ -377,10 +384,22 @@
         const START_DATE = new Date(2024, 11); 
         let currentStatementFile = null;
 
+        // --- ACTUALIZACIÓN DE CREDENCIALES ---
         document.addEventListener('DOMContentLoaded', () => {
-            const url = localStorage.getItem('sb_url');
-            const key = localStorage.getItem('sb_key');
-            if(!url || !key) return alert("Configura credenciales (sb_url, sb_key)");
+            // Nuevas credenciales hardcodeadas para asegurar conexión
+            const defaultUrl = "https://dudwerbbxycvgjetlkng.supabase.co";
+            const defaultKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1ZHdlcmJieHljdmdqZXRsa25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwODI1MDIsImV4cCI6MjA0NzY1ODUwMn0.u7_e2YwpgLYN-cmlu7WZ-xK3jy51cDFEcL_RRxav1JA";
+
+            // Prioridad 1: Usar credenciales guardadas en LocalStorage (si las hay)
+            // Prioridad 2: Si no hay credenciales guardadas, usar las nuevas por defecto y guardarlas.
+            const url = localStorage.getItem('sb_url') || defaultUrl;
+            const key = localStorage.getItem('sb_key') || defaultKey;
+
+            if (!localStorage.getItem('sb_url')) localStorage.setItem('sb_url', defaultUrl);
+            if (!localStorage.getItem('sb_key')) localStorage.setItem('sb_key', defaultKey);
+
+            if(!url || !key) return alert("Error de credenciales");
+
             supabaseClient = supabase.createClient(url, key);
             
             // Verificar conexión al iniciar
@@ -394,10 +413,12 @@
             const statusEl = document.getElementById('connection-status');
             const iconEl = document.getElementById('connection-icon');
             
-            if(!supabaseClient) {
-                statusEl.className = 'status-indicator disconnected';
-                statusEl.title = 'Cliente no inicializado';
-                iconEl.className = 'ph ph-wifi-slash';
+            if(!statusEl || !iconEl || !supabaseClient) {
+                if(statusEl) {
+                    statusEl.className = 'status-indicator disconnected';
+                    statusEl.title = 'Cliente no inicializado';
+                    iconEl.className = 'ph ph-wifi-slash';
+                }
                 return;
             }
 
