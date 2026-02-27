@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión Condominio - Sistema de Votaciones</title>
+    <title>Gestión Condominio - Sistema Integral</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Librería para generar PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
@@ -28,11 +27,6 @@
             --debt-bg: #ef4444;
             --debt-text: #ffffff;
             --debt-ok-bg: #10b981;
-
-            --type-ordinaria: #3b82f6;
-            --type-extra: #f59e0b;
-            --type-voto: #8b5cf6;
-            --type-cobro: #10b981;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
@@ -42,20 +36,42 @@
         /* HEADER */
         .app-header { display: flex; justify-content: flex-end; padding: 1rem 0; margin-bottom: 1rem; position: relative; z-index: 100; }
         .header-actions { display: flex; align-items: center; gap: 1.5rem; }
+        
+        /* ESTADO DE CONEXIÓN (NUEVO) */
+        .status-indicator {
+            width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            background: #f3f4f6; color: #9ca3af; font-size: 1.2rem; cursor: help; transition: all 0.3s ease; border: 1px solid transparent;
+        }
+        .status-indicator.connected { background: #dcfce7; color: #16a34a; box-shadow: 0 0 0 2px #dcfce7; border-color: #86efac; }
+        .status-indicator.disconnected { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+        .status-indicator.connecting { background: #fef9c3; color: #ca8a04; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
         .bell-container { position: relative; cursor: pointer; font-size: 1.8rem; color: var(--text-main); }
         .bell-container:hover { color: var(--primary); }
         .badge { position: absolute; top: -5px; right: -5px; background-color: #ef4444; color: white; font-size: 0.75rem; font-weight: bold; height: 20px; min-width: 20px; border-radius: 10px; display: flex; align-items: center; justify-content: center; padding: 0 5px; border: 2px solid white; display: none; }
-        .notifications-dropdown { position: absolute; top: 100%; right: 0; width: 360px; background: white; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid var(--border); display: none; flex-direction: column; margin-top: 0.5rem; overflow: hidden; max-height: 500px;}
+        .notifications-dropdown { position: absolute; top: 100%; right: 0; width: 380px; background: white; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid var(--border); display: none; flex-direction: column; margin-top: 0.5rem; overflow: hidden; max-height: 500px;}
         .notifications-dropdown.active { display: flex; }
         .notif-header { padding: 1rem; border-bottom: 1px solid var(--border); font-weight: 700; background: #f9fafb; }
         .notif-list { max-height: 400px; overflow-y: auto; }
         .notif-item { padding: 1rem; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background 0.2s; }
         .notif-item:hover { background: #f9fafb; }
         .notif-type { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.3rem; display: inline-block; padding: 2px 6px; border-radius: 4px; color: white; }
-        .type-votacion { background-color: var(--type-voto); }
-        .type-cobro { background-color: var(--type-cobro); }
-        .notif-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.2rem; }
-        .notif-date { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 5px; }
+        .type-cobro { background-color: var(--primary); }
+        .type-estado { background-color: #3b82f6; }
+        .type-ordinaria { background-color: #f59e0b; }
+        .type-extraordinaria { background-color: #ea580c; }
+        .type-votacion { background-color: #8b5cf6; }
+        
+        .btn-download-file {
+            display: inline-flex; align-items: center; gap: 5px;
+            margin-top: 0.5rem; padding: 0.4rem 0.8rem;
+            background: #eff6ff; color: #2563eb; border-radius: 6px;
+            font-size: 0.8rem; font-weight: 600; text-decoration: none;
+            border: 1px solid #dbeafe;
+        }
+        .btn-download-file:hover { background: #dbeafe; }
+
         .btn-logout { background: white; border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
         .btn-logout:hover { background: #f3f4f6; }
 
@@ -68,12 +84,43 @@
         .btn-primary:hover { background: var(--primary-dark); }
         .dashboard-section { display: none; }
 
-        /* CARDS */
+        /* CARDS & PANELS */
         .admin-card { background: white; padding: 2rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .profile-name { font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin-bottom: 1rem; }
 
-        /* VOTACIONES UI */
-        .voting-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; position: relative; }
+        /* TARJETA DEUDA */
+        .debt-card { background: var(--debt-bg); color: var(--debt-text); padding: 2rem; border-radius: 12px; text-align: center; margin-bottom: 2rem; box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.2); transition: background 0.3s; }
+        .debt-card.paid-up { background: var(--debt-ok-bg); box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2); }
+        .debt-amount { font-size: 2.5rem; font-weight: 800; margin: 0.5rem 0; }
+        .debt-note { font-size: 0.9rem; opacity: 0.9; }
+
+        /* TESORERIA */
+        .treasurer-controls { display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap; background: white; padding: 1rem; border-radius: 8px; border: 1px solid var(--border); }
+        .treasurer-row { border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: white; }
+        .treasurer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+        .user-mini-info { flex: 1; }
+        .user-mini-info strong { display: block; font-size: 1rem; }
+        .user-mini-info span { font-size: 0.85rem; color: #666; }
+        .user-debt-tag { background: #fee2e2; color: #991b1b; padding: 0.25rem 0.75rem; border-radius: 99px; font-weight: 700; font-size: 0.85rem; border: 1px solid #fecaca; white-space: nowrap; }
+        .user-debt-tag.paid { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+        .treasurer-actions { display: flex; gap: 0.5rem; align-items: center; margin-left: 1rem; }
+
+        /* MESES */
+        .mini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(55px, 1fr)); gap: 0.4rem; }
+        .mini-month { padding: 0.4rem; border-radius: 6px; text-align: center; font-size: 0.65rem; font-weight: 700; cursor: pointer; user-select: none; border: 1px solid transparent; transition: all 0.2s; }
+        .mini-month.paid { background-color: var(--status-paid-bg); color: var(--status-paid-text); border-color: #34d399; }
+        .mini-month.unpaid { background-color: var(--status-unpaid-bg); color: var(--status-unpaid-text); border-color: #f87171; }
+        .mini-month:hover { transform: scale(1.05); opacity: 0.9; }
+
+        .header-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+        .apt-badge { background: var(--bg-body); padding: 0.5rem 1rem; border-radius: 50px; font-weight: 700; color: var(--primary); }
+        .months-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1rem; }
+        .month-card { padding: 1rem; border-radius: 10px; text-align: center; font-weight: 600; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 0.5rem; border: 1px solid transparent; }
+        .card-paid { background: var(--status-paid-bg); color: var(--status-paid-text); border-color: #34d399; }
+        .card-unpaid { background: var(--status-unpaid-bg); color: var(--status-unpaid-text); border-color: #f87171; }
+
+        /* VOTACIONES */
+        .voting-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
         .voting-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem; }
         .voting-title { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
         .voting-desc { font-size: 0.95rem; color: #4b5563; line-height: 1.6; margin-bottom: 1.5rem; background: #f9fafb; padding: 1rem; border-radius: 8px; }
@@ -82,32 +129,26 @@
         .stat-yes { background: #d1fae5; color: #065f46; }
         .stat-no { background: #fee2e2; color: #991b1b; }
         .stat-total { background: #e5e7eb; color: #374151; }
-        
         .vote-actions { display: flex; gap: 1rem; margin-top: 1rem; }
         .btn-vote { flex: 1; padding: 1rem; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 1rem; transition: transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
         .btn-yes { background: var(--primary); color: white; }
         .btn-no { background: #ef4444; color: white; }
         .btn-vote:hover { transform: translateY(-2px); opacity: 0.9; }
-        .btn-vote:active { transform: translateY(0); }
-        .btn-vote:disabled { background: #9ca3af; cursor: not-allowed; transform: none; }
-
         .voting-meta { font-size: 0.8rem; color: #666; margin-top: 1rem; display: flex; justify-content: space-between; }
         .status-badge { font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; text-transform: uppercase; }
         .status-active { background: #dbeafe; color: #1e40af; }
         .status-closed { background: #f3f4f6; color: #4b5563; }
-
         .btn-download { background: #4b5563; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; margin-top: 0.5rem; display: inline-flex; align-items: center; gap: 0.5rem; }
-        .btn-download:hover { background: #374151; }
 
-        /* Tesorería (Mantenida breve) */
-        .debt-card { background: var(--debt-bg); color: var(--debt-text); padding: 2rem; border-radius: 12px; text-align: center; margin-bottom: 2rem; box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.2); }
-        .debt-amount { font-size: 2.5rem; font-weight: 800; margin: 0.5rem 0; }
-        .mini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(55px, 1fr)); gap: 0.4rem; }
-        .mini-month { padding: 0.4rem; border-radius: 6px; text-align: center; font-size: 0.65rem; font-weight: 700; cursor: pointer; user-select: none; border: 1px solid transparent; }
-        .mini-month.paid { background-color: var(--status-paid-bg); color: var(--status-paid-text); border-color: #34d399; }
-        .mini-month.unpaid { background-color: var(--status-unpaid-bg); color: var(--status-unpaid-text); border-color: #f87171; }
+        /* EVENTOS Y LISTAS */
+        .events-table-container { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 2rem; }
+        .events-header { padding: 1rem 1.5rem; background: #f9fafb; border-bottom: 1px solid var(--border); font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+        .event-row { padding: 1rem 1.5rem; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; }
+        .btn-icon { background: none; border: none; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s; }
+        .btn-edit { color: #3b82f6; background: #eff6ff; }
+        .btn-delete { color: #ef4444; background: #fef2f2; }
 
-        /* Modal */
+        /* MODALES */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-overlay.open { display: flex; }
         .modal { background: white; padding: 2rem; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); max-height: 90vh; overflow-y: auto;}
@@ -115,6 +156,11 @@
         .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
         .input-row { display: flex; gap: 1rem; }
         .input-row .input-group { flex: 1; }
+        .file-upload-box {
+            border: 2px dashed var(--border); border-radius: 8px; padding: 1.5rem; text-align: center;
+            cursor: pointer; transition: border-color 0.2s; background: #f9fafb;
+        }
+        .file-upload-box:hover { border-color: var(--primary); }
     </style>
 </head>
 <body>
@@ -130,10 +176,15 @@
             <button class="btn-primary" onclick="handleLogin()">Ingresar</button>
         </div>
 
-        <!-- DASHBOARD -->
+        <!-- DASHBOARD WRAPPER -->
         <div id="dashboard-wrapper" class="dashboard-section">
             <header class="app-header">
                 <div class="header-actions">
+                    <!-- ICONO DE CONEXIÓN -->
+                    <div id="connection-status" class="status-indicator disconnected" title="Estado de conexión">
+                        <i class="ph ph-wifi-slash" id="connection-icon"></i>
+                    </div>
+
                     <div class="bell-container" onclick="toggleNotifications()">
                         <i class="ph ph-bell"></i>
                         <div class="badge" id="notif-badge">0</div>
@@ -146,48 +197,154 @@
                 </div>
             </header>
 
-            <!-- PANEL ADMIN -->
+            <!-- PANEL ADMINISTRADOR -->
             <div id="admin-panel" style="display: none;">
                 <div class="admin-card">
-                    <div class="profile-name" id="admin-full-name">Panel Administrativo</div>
+                    <div class="profile-name">Panel de Administración</div>
                     
-                    <!-- Crear Votación -->
-                    <h4 style="margin-bottom: 1rem;">Crear Nueva Votación</h4>
-                    <div class="input-group"><label>Tema de la Votación</label><input type="text" id="vote-title" placeholder="Ej: Renovación de Piscina"></div>
-                    <div class="input-group"><label>Explicación Amplia</label><textarea id="vote-desc" rows="4" placeholder="Detalles del proyecto, costos estimados, beneficios..."></textarea></div>
-                    <div class="input-row">
-                        <div class="input-group">
-                            <label>Dirigido a</label>
-                            <select id="vote-audience">
-                                <option value="residents">Todos los Propietarios</option>
-                                <option value="admins">Solo Administradores</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label>Fecha Límite</label>
-                            <input type="datetime-local" id="vote-deadline">
-                        </div>
+                    <!-- BOTÓN RÁPIDO PARA ESTADO DE CUENTA -->
+                    <div style="display:flex; justify-content:flex-end; margin-bottom:1rem;">
+                        <button class="btn-primary" style="width:auto; margin:0; background-color: #3b82f6;" onclick="openStatementModal()">
+                            <i class="ph ph-file-plus"></i> Nuevo Estado de Cuenta
+                        </button>
                     </div>
-                    <button class="btn-primary" onclick="createVoting()"><i class="ph ph-check-square"></i> Lanzar Votación</button>
+
+                    <h4 style="margin-bottom: 1rem;">Crear Comunicado Simple</h4>
+                    <div class="input-group"><label>Título</label><input type="text" id="meet-title" placeholder="Ej: Mantenimiento Ascensor"></div>
+                    <div class="input-row">
+                        <div class="input-group"><label>Fecha</label><input type="datetime-local" id="meet-date"></div>
+                        <div class="input-group"><label>Expira</label><input type="datetime-local" id="meet-expires"></div>
+                    </div>
+                    <div class="input-group"><label>Tipo</label><select id="meet-type"><option value="Ordinaria">Reunión Ordinaria</option><option value="Extraordinaria">Reunión Extraordinaria</option><option value="Cobro">Aviso de Cobro (Manual)</option></select></div>
+                    <div class="input-group"><label>Descripción</label><textarea id="meet-desc" rows="2"></textarea></div>
+                    <button class="btn-primary" onclick="createMeeting()"><i class="ph ph-paper-plane-right"></i> Publicar</button>
                 </div>
 
-                <h3 style="margin-bottom: 1rem;">Historial de Votaciones y Actas</h3>
-                <div id="admin-votings-list"></div>
+                <!-- 2. CREAR VOTACIÓN -->
+                <div class="admin-card" style="border-left: 4px solid #8b5cf6;">
+                    <h4 style="margin-bottom: 1rem; color: #8b5cf6;">Crear Nueva Votación</h4>
+                    <div class="input-group"><label>Tema</label><input type="text" id="vote-title" placeholder="Ej: Cambio de Reglamento"></div>
+                    <div class="input-group"><label>Explicación</label><textarea id="vote-desc" rows="3"></textarea></div>
+                    <div class="input-row">
+                        <div class="input-group"><label>Dirigido a</label><select id="vote-audience"><option value="residents">Todos los Propietarios</option><option value="admins">Solo Administradores</option></select></div>
+                        <div class="input-group"><label>Fecha Límite</label><input type="datetime-local" id="vote-deadline"></div>
+                    </div>
+                    <button class="btn-primary" style="background-color: #8b5cf6;" onclick="createVoting()"><i class="ph ph-check-square"></i> Lanzar Votación</button>
+                </div>
+
+                <!-- 3. TESORERÍA -->
+                <div id="treasury-panel" style="display: none;">
+                    <div class="admin-card" style="border-left: 4px solid var(--primary);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                            <div>
+                                <h4 style="margin-bottom: 0.5rem;">Configuración de Cuota</h4>
+                                <p style="font-size: 0.9rem; color: #666;">El nuevo mes aparece el día 10.</p>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <span style="font-weight: bold;">₡</span>
+                                <input type="number" id="monthly-fee-input" style="width: 120px;" placeholder="Monto">
+                                <button class="btn-primary" style="margin:0; width: auto;" onclick="saveFeeConfig()">Actualizar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="treasurer-controls">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+                            <i class="ph ph-funnel" style="font-size: 1.2rem;"></i>
+                            <label style="margin:0;">Bloque:</label>
+                            <select id="block-filter" onchange="loadTreasurerData()" style="width: auto;">
+                                <option value="all">Todos</option>
+                                <option value="A">Bloque A (1-20)</option>
+                                <option value="B">Bloque B (21-40)</option>
+                                <option value="C">Bloque C (41-60)</option>
+                                <option value="D">Bloque D (61-80)</option>
+                                <option value="E">Bloque E (81-82)</option>
+                            </select>
+                        </div>
+                        
+                        <button class="btn-primary" style="width: auto; margin:0; background-color: #10b981;" onclick="generateMonthlyBillNotification()">
+                            <i class="ph ph-receipt"></i> Emitir Cobro
+                        </button>
+                        
+                        <button class="btn-primary" style="width: auto; margin:0; background-color: #3b82f6;" onclick="openStatementModal()">
+                            <i class="ph ph-upload-simple"></i> Subir Estado de Cuenta
+                        </button>
+                    </div>
+
+                    <div id="treasurer-users-list"></div>
+                </div>
+
+                <!-- 4. HISTORIAL VOTACIONES -->
+                <div class="events-table-container">
+                    <div class="events-header" style="background: #f5f3ff; border-color: #ddd6fe;">
+                        <span style="color: #5b21b6;">Historial de Votaciones</span>
+                        <button onclick="loadVotings('admin')" style="background:none; border:none; color:#8b5cf6; cursor:pointer;"><i class="ph ph-arrows-clockwise"></i></button>
+                    </div>
+                    <div id="admin-votings-list"></div>
+                </div>
+
+                <!-- 5. HISTORIAL NOTIFICACIONES (CON EDITAR Y BORRAR) -->
+                <div class="events-table-container">
+                    <div class="events-header">
+                        <span>Historial de Notificaciones y Archivos</span>
+                        <button onclick="loadAdminEvents()" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="ph ph-arrows-clockwise"></i></button>
+                    </div>
+                    <div id="admin-events-list"></div>
+                </div>
             </div>
 
             <!-- PANEL PROPIETARIO -->
             <div id="owner-panel" style="display: none;">
                 <div class="debt-card" id="owner-debt-card">
-                    <div>Deuda Total</div>
+                    <div>Deuda Total Acumulada</div>
                     <div class="debt-amount" id="owner-debt-amount">₡ 0</div>
+                    <div class="debt-note">Cuota mensual: <span id="owner-fee-display">₡ 0</span> (Vence día 10)</div>
                 </div>
+
                 <h3 style="margin-bottom: 1rem;">Votaciones Activas</h3>
                 <div id="owner-votings-list"></div>
+
+                <div class="header-info" style="margin-top: 3rem;">
+                    <div>
+                        <h3 id="owner-name">Nombre Propietario</h3>
+                        <span style="color: #666; font-size: 0.9rem;">Historial de Pagos</span>
+                    </div>
+                    <span class="apt-badge" id="apt-number">Apt #001</span>
+                </div>
+                <div class="months-grid" id="months-display"></div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL BITACORA (SOLO LECTURA PARA PDF) -->
+    <!-- MODAL ESTADO DE CUENTA (ARCHIVO) -->
+    <div class="modal-overlay" id="statement-modal">
+        <div class="modal">
+            <h3>Subir/Editar Estado de Cuenta</h3>
+            <input type="hidden" id="stmt-id">
+            <div class="input-group"><label>Título</label><input type="text" id="stmt-title" placeholder="Ej: Estado de Cuenta Marzo"></div>
+            <div class="input-group"><label>Descripción</label><textarea id="stmt-desc" rows="2" placeholder="Detalles adicionales..."></textarea></div>
+            <div class="input-row">
+                <div class="input-group"><label>Fecha Emisión</label><input type="datetime-local" id="stmt-date"></div>
+                <div class="input-group"><label>Expira (Ocultar)</label><input type="datetime-local" id="stmt-expires"></div>
+            </div>
+            
+            <div class="input-group">
+                <label>Archivo (PDF/Imagen)</label>
+                <div class="file-upload-box" onclick="document.getElementById('stmt-file').click()">
+                    <i class="ph ph-upload-simple" style="font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem;"></i>
+                    <div style="font-size: 0.9rem;" id="stmt-file-name">Click para seleccionar archivo</div>
+                    <input type="file" id="stmt-file" style="display: none;" onchange="updateFileName(this)">
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-logout" onclick="closeStatementModal()">Cancelar</button>
+                <button class="btn-primary" onclick="submitStatement()">Enviar a Todos</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL BITACORA PDF (VOTACIONES) -->
     <div class="modal-overlay" id="log-modal">
         <div class="modal">
             <h3>Bitácora de Votación</h3>
@@ -199,18 +356,95 @@
         </div>
     </div>
 
+    <!-- MODAL EDITAR PROPIETARIO -->
+    <div class="modal-overlay" id="owner-modal">
+        <div class="modal">
+            <h3>Editar Propietario</h3>
+            <input type="hidden" id="edit-owner-id">
+            <div class="input-group"><label>Apartamento</label><input type="text" id="edit-owner-apt"></div>
+            <div class="input-group"><label>Usuario</label><input type="text" id="edit-owner-user"></div>
+            <div class="input-group"><label>Nombre</label><input type="text" id="edit-owner-name"></div>
+            <div class="input-group"><label>Nueva Clave</label><input type="text" id="edit-owner-pass" placeholder="Dejar vacío para no cambiar"></div>
+            <div class="modal-actions"><button class="btn-logout" onclick="closeOwnerModal()">Cancelar</button><button class="btn-primary" onclick="saveOwnerEdit()">Guardar</button></div>
+        </div>
+    </div>
+
     <script>
+        // CONFIGURACIÓN
         let supabaseClient = null;
         let currentUser = null;
+        let currentFee = 10000;
+        const START_DATE = new Date(2024, 11); 
+        let currentStatementFile = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             const url = localStorage.getItem('sb_url');
             const key = localStorage.getItem('sb_key');
-            if(!url || !key) return alert("Configura credenciales");
+            if(!url || !key) return alert("Configura credenciales (sb_url, sb_key)");
             supabaseClient = supabase.createClient(url, key);
+            
+            // Verificar conexión al iniciar
+            setTimeout(checkConnection, 1000);
+            // Verificar conexión cada 30 segundos
+            setInterval(checkConnection, 30000);
         });
 
-        // --- AUTH ---
+        // --- VERIFICACIÓN DE CONEXIÓN A SUPABASE ---
+        async function checkConnection() {
+            const statusEl = document.getElementById('connection-status');
+            const iconEl = document.getElementById('connection-icon');
+            
+            if(!supabaseClient) {
+                statusEl.className = 'status-indicator disconnected';
+                statusEl.title = 'Cliente no inicializado';
+                iconEl.className = 'ph ph-wifi-slash';
+                return;
+            }
+
+            // Estado "Conectando" (Amarillo)
+            statusEl.className = 'status-indicator connecting';
+            statusEl.title = 'Verificando conexión...';
+            iconEl.className = 'ph ph-spinner';
+
+            try {
+                // Petición ligera para probar conexión
+                const { data, error } = await supabaseClient.from('config').select('id').limit(1).single();
+                if (error) throw error;
+
+                // Éxito (Verde)
+                statusEl.className = 'status-indicator connected';
+                statusEl.title = 'Conectado a Supabase';
+                iconEl.className = 'ph ph-wifi-high';
+
+            } catch (err) {
+                console.error("Error de conexión:", err);
+                // Error (Rojo)
+                statusEl.className = 'status-indicator disconnected';
+                statusEl.title = 'Sin conexión a Supabase';
+                iconEl.className = 'ph ph-wifi-slash';
+            }
+        }
+
+        // FECHAS
+        function getMonthsToRender() {
+            let count = 0;
+            const today = new Date();
+            let checkDate = new Date(START_DATE);
+            while(true) {
+                if (checkDate > today) break;
+                const isCurrentMonth = checkDate.getMonth() === today.getMonth() && checkDate.getFullYear() === today.getFullYear();
+                if (isCurrentMonth) {
+                    if (today.getDate() >= 10) count++;
+                } else {
+                    count++;
+                }
+                checkDate.setMonth(checkDate.getMonth() + 1);
+                if(count > 48) break; 
+            }
+            return count;
+        }
+
+        // AUTH
         async function handleLogin() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
@@ -228,16 +462,318 @@
             
             if (currentUser.type === 'admin') {
                 document.getElementById('admin-panel').style.display = 'block';
-                document.getElementById('admin-full-name').textContent = currentUser.nombre_completo;
+                const isTreasurer = (currentUser.username === 'admin0' || currentUser.username === 'admin1');
+                document.getElementById('treasury-panel').style.display = isTreasurer ? 'block' : 'none';
+                if (isTreasurer) loadTreasurerData();
+                loadAdminEvents(); 
                 loadVotings('admin');
-                document.getElementById('notif-badge').style.display = 'none';
+                document.getElementById('notif-badge').style.display = 'none'; 
             } else {
                 document.getElementById('owner-panel').style.display = 'block';
+                document.getElementById('owner-name').textContent = currentUser.nombre_propietario;
+                document.getElementById('apt-number').textContent = `Apt ${currentUser.numero_apartamento}`;
+                renderOwnerView();
+                loadNotifications(); 
                 loadVotings('owner');
-                loadNotifications();
             }
+            loadFeeConfig();
         }
         function logout() { location.reload(); }
+
+        // --- NOTIFICACIONES (Con Archivos) ---
+        async function loadNotifications() {
+            const now = new Date().toISOString();
+            const dismissed = currentUser.dismissed_notifs || [];
+            const { data: allMeetings } = await supabaseClient.from('meetings').select('*').order('created_at', { ascending: false });
+            if(!allMeetings) return;
+            
+            // Filtro: No descartada + No expirada
+            const activeMeetings = allMeetings.filter(m => {
+                if(dismissed.includes(m.id)) return false;
+                if(m.expires_at && new Date(m.expires_at) < new Date()) return false; 
+                return true;
+            });
+
+            document.getElementById('notif-badge').textContent = activeMeetings.length;
+            document.getElementById('notif-badge').style.display = activeMeetings.length > 0 ? 'flex' : 'none';
+            const list = document.getElementById('notif-list');
+            list.innerHTML = activeMeetings.length ? '' : '<div style="padding:1rem; text-align:center; color:#999;">Sin alertas</div>';
+            
+            activeMeetings.forEach(m => {
+                let typeClass = m.type === 'Estado' ? 'type-estado' : (m.type === 'Ordinaria' ? 'type-ordinaria' : (m.type === 'Extraordinaria' ? 'type-extraordinaria' : (m.type === 'Cobro' ? 'type-cobro' : 'type-votacion')));
+                const dateStr = m.event_date ? new Date(m.event_date).toLocaleString('es-ES', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) : new Date(m.created_at).toLocaleDateString();
+                
+                let attachmentHtml = '';
+                if(m.attachment_url) {
+                    attachmentHtml = `<a href="${m.attachment_url}" target="_blank" class="btn-download-file"><i class="ph ph-download-simple"></i> Ver/Descargar Archivo</a>`;
+                }
+
+                list.innerHTML += `<div class="notif-item"><span class="notif-type ${typeClass}">${m.type}</span><div class="notif-title">${m.title}</div><div style="font-size:0.85rem; color:#555; margin-top:4px;">${m.description}</div>${attachmentHtml}<div class="notif-date"><i class="ph ph-calendar-blank"></i> ${dateStr}</div></div>`;
+            });
+        }
+        function toggleNotifications() { const d = document.getElementById('notif-dropdown'); d.classList.toggle('active'); if(d.classList.contains('active')) loadNotifications(); }
+
+        // --- ADMIN EVENTS (Con Edición de Archivos) ---
+        async function loadAdminEvents() {
+            const { data } = await supabaseClient.from('meetings').select('*').order('created_at', { ascending: false });
+            const list = document.getElementById('admin-events-list');
+            list.innerHTML = '';
+            if(!data || data.length === 0) { list.innerHTML = '<div style="padding:1rem; text-align:center; color:#999;">Sin historial</div>'; return; }
+            data.forEach(m => {
+                const now = new Date();
+                const isExpired = m.expires_at && new Date(m.expires_at) < now;
+                let typeColor = m.type === 'Estado' ? '#3b82f6' : (m.type === 'Ordinaria' ? '#f59e0b' : (m.type === 'Extraordinaria' ? '#ea580c' : (m.type === 'Cobro' ? '#10b981' : '#8b5cf6')));
+                if(isExpired) typeColor = '#9ca3af';
+                
+                let fileIcon = m.attachment_url ? '<i class="ph ph-file-pdf" style="margin-left:5px;"></i>' : '';
+                
+                const dateDisplay = m.event_date ? new Date(m.event_date).toLocaleDateString('es-ES') : '-';
+                
+                let actions = `<button class="btn-icon btn-delete" onclick="deleteEvent('${m.id}')"><i class="ph ph-trash"></i></button>`;
+                
+                if(m.type === 'Estado') {
+                    actions = `<button class="btn-icon btn-edit" onclick="openStatementModal('${m.id}')" title="Editar Archivo/Fechas"><i class="ph ph-pencil-simple"></i></button><button class="btn-icon btn-delete" onclick="deleteEvent('${m.id}')"><i class="ph ph-trash"></i></button>`;
+                }
+
+                list.innerHTML += `<div class="event-row" style="${isExpired ? 'opacity:0.7' : ''}"><div class="event-info"><h4 style="color:${typeColor}">${m.title} ${fileIcon}</h4><div class="event-meta"><span>${m.type}</span><span>•</span><span>${dateDisplay}</span></div></div><div class="event-actions">${actions}</div></div>`;
+            });
+        }
+        async function createMeeting() {
+            const title = document.getElementById('meet-title').value;
+            const type = document.getElementById('meet-type').value;
+            const desc = document.getElementById('meet-desc').value;
+            const dateVal = document.getElementById('meet-date').value;
+            const expiresVal = document.getElementById('meet-expires').value;
+            if(!title) return alert("El título es obligatorio");
+            const payload = { title, type, description: desc, created_by: currentUser.username, event_date: dateVal ? new Date(dateVal).toISOString() : null, expires_at: expiresVal ? new Date(expiresVal).toISOString() : null };
+            const { error } = await supabaseClient.from('meetings').insert([payload]);
+            if(error) return alert("Error: " + error.message);
+            alert("Notificación creada"); document.getElementById('meet-title').value=''; document.getElementById('meet-desc').value=''; loadAdminEvents();
+        }
+        async function deleteEvent(id) {
+            if(!confirm("¿Borrar?")) return;
+            const { error } = await supabaseClient.from('meetings').delete().eq('id', id);
+            if(error) return alert("Error: " + error.message);
+            loadAdminEvents();
+        }
+
+        // --- GESTIÓN DE ESTADO DE CUENTA (ARCHIVOS) ---
+        function openStatementModal(editId = null) {
+            document.getElementById('stmt-id').value = editId || '';
+            document.getElementById('stmt-title').value = '';
+            document.getElementById('stmt-desc').value = '';
+            document.getElementById('stmt-date').value = '';
+            document.getElementById('stmt-expires').value = '';
+            document.getElementById('stmt-file').value = '';
+            document.getElementById('stmt-file-name').textContent = 'Click para seleccionar archivo';
+            currentStatementFile = null;
+            if(editId) alert("Para editar, cargará los datos existentes. Si sube un nuevo archivo, reemplazará al anterior.");
+            document.getElementById('statement-modal').classList.add('open');
+        }
+        function closeStatementModal() { document.getElementById('statement-modal').classList.remove('open'); }
+        function updateFileName(input) {
+            if (input.files && input.files[0]) {
+                document.getElementById('stmt-file-name').textContent = input.files[0].name;
+                currentStatementFile = input.files[0];
+            }
+        }
+
+        async function submitStatement() {
+            const id = document.getElementById('stmt-id').value;
+            const title = document.getElementById('stmt-title').value || 'Estado de Cuenta';
+            const desc = document.getElementById('stmt-desc').value || '';
+            const dateVal = document.getElementById('stmt-date').value;
+            const expiresVal = document.getElementById('stmt-expires').value;
+            
+            let attachmentUrl = null;
+
+            if (currentStatementFile) {
+                const fileName = `${Date.now()}_${currentStatementFile.name}`;
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage.from('statements').upload(`public/${fileName}`, currentStatementFile);
+                if (uploadError) return alert("Error subiendo archivo: " + uploadError.message);
+                const { data: publicUrlData } = supabaseClient.storage.from('statements').getPublicUrl(`public/${fileName}`);
+                attachmentUrl = publicUrlData.publicUrl;
+            }
+
+            const payload = {
+                title,
+                type: 'Estado',
+                description: desc || 'Se ha publicado un nuevo estado de cuenta.',
+                created_by: currentUser.username,
+                event_date: dateVal ? new Date(dateVal).toISOString() : new Date().toISOString(),
+                expires_at: expiresVal ? new Date(expiresVal).toISOString() : null
+            };
+
+            if (attachmentUrl) payload.attachment_url = attachmentUrl;
+
+            if (id) {
+                if(attachmentUrl) payload.attachment_url = attachmentUrl;
+                const { error } = await supabaseClient.from('meetings').update(payload).eq('id', id);
+                if(error) return alert("Error actualizando: " + error.message);
+                alert("Estado de cuenta actualizado");
+            } else {
+                if(!attachmentUrl) return alert("Debes subir un archivo para el estado de cuenta");
+                const { error } = await supabaseClient.from('meetings').insert([payload]);
+                if(error) return alert("Error creando: " + error.message);
+                alert("Estado de cuenta enviado a todos");
+            }
+
+            closeStatementModal();
+            loadAdminEvents();
+        }
+
+        // --- TESORERIA ---
+        async function loadFeeConfig() {
+            const { data } = await supabaseClient.from('config').select('monthly_fee').eq('id', 1).single();
+            if(data) { currentFee = parseFloat(data.monthly_fee); document.getElementById('monthly-fee-input').value = currentFee; document.getElementById('owner-fee-display').textContent = `₡ ${currentFee.toLocaleString()}`; }
+        }
+        async function saveFeeConfig() {
+            const newFee = document.getElementById('monthly-fee-input').value;
+            if(!newFee || newFee < 0) return alert("Monto inválido");
+            const { error } = await supabaseClient.from('config').update({ monthly_fee: newFee }).eq('id', 1);
+            if(error) return alert("Error guardando cuota: " + error.message);
+            alert("Cuota actualizada"); loadFeeConfig(); loadTreasurerData();
+        }
+        async function generateMonthlyBillNotification() {
+            const today = new Date();
+            const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            const monthName = monthNames[today.getMonth()];
+            const year = today.getFullYear();
+            const title = `Cuota Mensual ${monthName} ${year}`;
+            const monthId = `${year}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+            const { data: existing } = await supabaseClient.from('meetings').select('*').eq('title', title).eq('type', 'Cobro').maybeSingle();
+            if (existing) return alert(`Ya existe el cobro para ${monthName}.`);
+            if (!confirm(`¿Emitir cobro para ${title}?`)) return;
+            const endOfMonth = new Date(year, today.getMonth() + 1, 0, 23, 59, 59);
+            const { error } = await supabaseClient.from('meetings').insert([{ title: title, type: 'Cobro', description: `Vence el día 10.`, created_by: currentUser.username, month_id: monthId, event_date: new Date().toISOString(), expires_at: endOfMonth.toISOString() }]);
+            if(error) return alert("Error: " + error.message);
+            alert("Cobro emitido"); loadAdminEvents();
+        }
+
+        async function loadTreasurerData() {
+            const filterBlock = document.getElementById('block-filter').value;
+            const { data: owners } = await supabaseClient.from('apartments').select('*').order('numero_apartamento');
+            const list = document.getElementById('treasurer-users-list');
+            list.innerHTML = '';
+            if(!owners) return;
+            const filteredOwners = owners.filter(owner => {
+                const apt = parseInt(owner.numero_apartamento);
+                if (filterBlock === 'all') return true;
+                if (filterBlock === 'A') return apt >= 1 && apt <= 20;
+                if (filterBlock === 'B') return apt >= 21 && apt <= 40;
+                if (filterBlock === 'C') return apt >= 41 && apt <= 60;
+                if (filterBlock === 'D') return apt >= 61 && apt <= 80;
+                if (filterBlock === 'E') return apt >= 81 && apt <= 82;
+                return true;
+            });
+            const monthsToShow = getMonthsToRender();
+
+            filteredOwners.forEach(owner => {
+                const paidMonths = owner.meses_pagados || [];
+                const unpaidCount = monthsToShow - paidMonths.length; 
+                const debt = unpaidCount * currentFee;
+                const isDebtFree = debt <= 0;
+                let html = `
+                <div class="treasurer-row">
+                    <div class="treasurer-header">
+                        <div class="user-mini-info">
+                            <strong>${owner.nombre_propietario} <span style="font-weight:400; color:#666;">(Apt ${owner.numero_apartamento})</span></strong>
+                            <span>User: ${owner.usuario}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:1rem;">
+                            <div class="user-debt-tag ${isDebtFree ? 'paid' : ''}">
+                                ${isDebtFree ? 'AL DÍA' : 'DEBE: ₡' + debt.toLocaleString()}
+                            </div>
+                            <div class="treasurer-actions">
+                                <button class="btn-icon btn-edit" onclick="openOwnerModal(${owner.id}, '${owner.numero_apartamento}', '${owner.usuario}', '${owner.nombre_propietario}')" title="Editar Propietario">
+                                    <i class="ph ph-pencil-simple" style="font-size:1.2rem;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mini-grid" id="grid-${owner.id}">
+                        ${generateMiniGridHTML(owner.id, paidMonths, monthsToShow)}
+                    </div>
+                </div>`;
+                list.innerHTML += html;
+            });
+        }
+        function generateMiniGridHTML(userId, paidMonths, limit) {
+            let html = '';
+            const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+            for (let i = 0; i < limit; i++) {
+                const date = new Date(START_DATE);
+                date.setMonth(START_DATE.getMonth() + i);
+                const monthId = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                const isPaid = paidMonths.includes(monthId);
+                const shortName = monthNames[date.getMonth()];
+                const yearShort = String(date.getFullYear()).substr(-2);
+                html += `<div class="mini-month ${isPaid ? 'paid' : 'unpaid'}" onclick="toggleMonthPayment(${userId}, '${monthId}', this)">${shortName}<br>${yearShort}</div>`;
+            }
+            return html;
+        }
+
+        async function toggleMonthPayment(userId, monthId, element) {
+            const wasPaid = element.classList.contains('paid');
+            if(wasPaid) { element.classList.remove('paid'); element.classList.add('unpaid'); } 
+            else { element.classList.remove('unpaid'); element.classList.add('paid'); }
+
+            const { data: owner } = await supabaseClient.from('apartments').select('meses_pagados, dismissed_notifs').eq('id', userId).single();
+            if(!owner) return alert("Error cargando datos");
+            
+            let months = owner.meses_pagados || [];
+            let dismissed = owner.dismissed_notifs || [];
+
+            if (wasPaid) { 
+                months = months.filter(m => m !== monthId); 
+            } else { 
+                months.push(monthId); 
+                const { data: cobroNotif } = await supabaseClient.from('meetings').select('id').eq('type', 'Cobro').eq('month_id', monthId).maybeSingle();
+                if(cobroNotif) {
+                    if(!dismissed.includes(cobroNotif.id)) {
+                        dismissed.push(cobroNotif.id);
+                        alert("Mes pagado. Notificación de cobro eliminada.");
+                    }
+                }
+            }
+
+            const { error } = await supabaseClient.from('apartments').update({ meses_pagados: months, dismissed_notifs: dismissed }).eq('id', userId);
+            if(error) {
+                alert("Error: " + error.message);
+                if(wasPaid) { element.classList.add('paid'); element.classList.remove('unpaid'); }
+                else { element.classList.add('unpaid'); element.classList.remove('paid'); }
+            } else { loadTreasurerData(); }
+        }
+
+        // --- PROPIETARIO VIEW ---
+        function renderOwnerView() {
+            const monthsToShow = getMonthsToRender(); 
+            const paidMonths = currentUser.meses_pagados || [];
+            const unpaidCount = monthsToShow - paidMonths.length;
+            const totalDebt = unpaidCount * currentFee;
+            const debtCard = document.getElementById('owner-debt-card');
+            const debtAmount = document.getElementById('owner-debt-amount');
+            if (totalDebt > 0) { debtCard.classList.remove('paid-up'); debtAmount.textContent = `₡ ${totalDebt.toLocaleString()}`; } 
+            else { debtCard.classList.add('paid-up'); debtAmount.textContent = "AL DÍA"; }
+            renderPaymentGrid(paidMonths, monthsToShow);
+        }
+        function renderPaymentGrid(paidMonths, limit) {
+            const grid = document.getElementById('months-display');
+            grid.innerHTML = '';
+            const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            for (let i = 0; i < limit; i++) {
+                const date = new Date(START_DATE);
+                date.setMonth(START_DATE.getMonth() + i);
+                const monthId = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                const isPaid = paidMonths.includes(monthId);
+                const card = document.createElement('div');
+                card.className = `month-card ${isPaid ? 'card-paid' : 'card-unpaid'}`;
+                const iconClass = isPaid ? 'ph-check-circle' : 'ph-x-circle';
+                const statusText = isPaid ? 'PAGADO' : 'PENDIENTE';
+                card.innerHTML = `<i class="ph ${iconClass}" style="font-size:1.5rem; margin-bottom:5px;"></i><div>${monthNames[date.getMonth()]}</div><div style="font-size:0.75rem; opacity:0.8">${date.getFullYear()}</div><div style="font-size:0.7rem; font-weight:700; margin-top:5px;">${statusText}</div>`;
+                grid.appendChild(card);
+            }
+        }
 
         // --- VOTACIONES ---
         async function createVoting() {
@@ -245,260 +781,100 @@
             const desc = document.getElementById('vote-desc').value;
             const audience = document.getElementById('vote-audience').value;
             const deadlineVal = document.getElementById('vote-deadline').value;
-
             if(!title || !desc || !deadlineVal) return alert("Todos los campos son obligatorios");
-
-            const payload = {
-                title, description: desc, target_audience: audience,
-                deadline: new Date(deadlineVal).toISOString(),
-                created_by: currentUser.username
-            };
-
+            const payload = { title, description: desc, target_audience: audience, deadline: new Date(deadlineVal).toISOString(), created_by: currentUser.username };
             const { error } = await supabaseClient.from('votings').insert([payload]);
             if(error) return alert("Error: " + error.message);
-
-            // Crear notificación automática de "Llamado a Votación"
             const expires = new Date(deadlineVal);
-            await supabaseClient.from('meetings').insert([{
-                title: `Nueva Votación: ${title}`,
-                type: 'Votación',
-                description: `Se ha abierto una votación sobre "${title}". Fecha límite: ${new Date(deadlineVal).toLocaleDateString()}.`,
-                created_by: currentUser.username,
-                expires_at: expires.toISOString()
-            }]);
-
+            await supabaseClient.from('meetings').insert([{ title: `Nueva Votación: ${title}`, type: 'Votación', description: `Se ha abierto una votación. Fecha límite: ${new Date(deadlineVal).toLocaleDateString()}.`, created_by: currentUser.username, expires_at: expires.toISOString() }]);
             alert("Votación creada y notificada");
-            document.getElementById('vote-title').value = '';
-            document.getElementById('vote-desc').value = '';
+            document.getElementById('vote-title').value = ''; document.getElementById('vote-desc').value = '';
             loadVotings('admin');
         }
 
         async function loadVotings(viewType) {
             let query = supabaseClient.from('votings').select('*').order('created_at', { ascending: false });
-            
-            // Si es propietario, solo ver las dirigidas a residents
-            if(viewType === 'owner') {
-                // Filtro manual en JS o query compleja. Hacemos filtro JS para simplicidad con audience
-            }
-
             const { data: votings } = await query;
             const listId = viewType === 'admin' ? 'admin-votings-list' : 'owner-votings-list';
             const list = document.getElementById(listId);
             list.innerHTML = '';
-
-            if(!votings || votings.length === 0) {
-                list.innerHTML = '<div style="text-align:center; color:#999; padding:1rem;">No hay votaciones activas.</div>';
-                return;
-            }
-
+            if(!votings || votings.length === 0) { list.innerHTML = '<div style="text-align:center; color:#999; padding:1rem;">No hay votaciones.</div>'; return; }
             const now = new Date();
 
             for(let v of votings) {
-                // Verificar si se debe cerrar por tiempo o quorum
                 let status = v.status;
                 let isClosed = false;
-                
                 if (status === 'active') {
-                    if (now > new Date(v.deadline)) {
-                        status = 'closed_time';
-                        isClosed = true;
-                        await updateVotingStatus(v.id, 'closed_time');
-                    } else if (v.total_votes >= v.quorum) {
-                        status = 'closed_quorum';
-                        isClosed = true;
-                        await updateVotingStatus(v.id, 'closed_quorum');
-                    }
-                } else {
-                    isClosed = true;
-                }
-
-                // Filtrar visibilidad
+                    if (now > new Date(v.deadline)) { status = 'closed_time'; isClosed = true; await updateVotingStatus(v.id, 'closed_time'); } 
+                    else if (v.total_votes >= v.quorum) { status = 'closed_quorum'; isClosed = true; await updateVotingStatus(v.id, 'closed_quorum'); }
+                } else { isClosed = true; }
                 if (viewType === 'owner' && v.target_audience === 'admins') continue;
-
-                // Renderizar
+                
                 const yesPct = v.total_votes > 0 ? Math.round((v.yes_count / v.total_votes) * 100) : 0;
                 const noPct = v.total_votes > 0 ? Math.round((v.no_count / v.total_votes) * 100) : 0;
-
-                let html = `
-                <div class="voting-card" style="border-left: 5px solid ${isClosed ? '#9ca3af' : '#8b5cf6'}">
-                    <div class="voting-header">
-                        <div class="voting-title">${v.title} <span class="status-badge ${isClosed ? 'status-closed' : 'status-active'}">${isClosed ? 'CERRADA' : 'ACTIVA'}</span></div>
-                        ${viewType === 'admin' ? `<button class="btn-download" onclick="preparePDF(${v.id})"><i class="ph ph-file-pdf"></i> Acta</button>` : ''}
-                    </div>
-                    <div class="voting-desc">${v.description}</div>
-                    
-                    <div class="voting-stats">
-                        <div class="stat-box stat-yes">SÍ<br><span style="font-size:1.5rem">${v.yes_count}</span> (${yesPct}%)</div>
-                        <div class="stat-box stat-no">NO<br><span style="font-size:1.5rem">${v.no_count}</span> (${noPct}%)</div>
-                        <div class="stat-box stat-total">TOTAL<br><span style="font-size:1.5rem">${v.total_votes} / ${v.quorum}</span></div>
-                    </div>
-                `;
-
-                // Botones de voto si está activa
+                let html = `<div class="voting-card" style="border-left: 5px solid ${isClosed ? '#9ca3af' : '#8b5cf6'}"><div class="voting-header"><div class="voting-title">${v.title} <span class="status-badge ${isClosed ? 'status-closed' : 'status-active'}">${isClosed ? 'CERRADA' : 'ACTIVA'}</span></div>${viewType === 'admin' ? `<button class="btn-download" onclick="preparePDF(${v.id})"><i class="ph ph-file-pdf"></i> Acta</button>` : ''}</div><div class="voting-desc">${v.description}</div><div class="voting-stats"><div class="stat-box stat-yes">SÍ<br><span style="font-size:1.5rem">${v.yes_count}</span> (${yesPct}%)</div><div class="stat-box stat-no">NO<br><span style="font-size:1.5rem">${v.no_count}</span> (${noPct}%)</div><div class="stat-box stat-total">TOTAL<br><span style="font-size:1.5rem">${v.total_votes} / ${v.quorum}</span></div></div>`;
+                
                 if (!isClosed) {
-                    // Verificar si el usuario ya votó
                     const { data: myVote } = await supabaseClient.from('user_votes').select('*').eq('voting_id', v.id).eq('username', currentUser.username).maybeSingle();
-                    
-                    if (myVote) {
-                        html += `<div style="text-align:center; color:var(--primary); font-weight:bold;">Ya has votado: ${myVote.choice === 'yes' ? 'A FAVOR' : 'EN CONTRA'}</div>`;
-                    } else {
-                        html += `
-                        <div class="vote-actions">
-                            <button class="btn-vote btn-yes" onclick="submitVote(${v.id}, 'yes')"><i class="ph ph-thumbs-up"></i> VOTAR SÍ</button>
-                            <button class="btn-vote btn-no" onclick="submitVote(${v.id}, 'no')"><i class="ph ph-thumbs-down"></i> VOTAR NO</button>
-                        </div>`;
-                    }
+                    if (myVote) { html += `<div style="text-align:center; color:var(--primary); font-weight:bold;">Ya has votado: ${myVote.choice === 'yes' ? 'A FAVOR' : 'EN CONTRA'}</div>`; }
+                    else { html += `<div class="vote-actions"><button class="btn-vote btn-yes" onclick="submitVote(${v.id}, 'yes')"><i class="ph ph-thumbs-up"></i> VOTAR SÍ</button><button class="btn-vote btn-no" onclick="submitVote(${v.id}, 'no')"><i class="ph ph-thumbs-down"></i> VOTAR NO</button></div>`; }
                 } else {
                     let resultText = v.yes_count > v.no_count ? "APROBADO" : (v.no_count > v.yes_count ? "RECHAZADO" : "EMPATE");
                     html += `<div style="text-align:center; font-weight:800; font-size:1.2rem; margin-top:1rem;">RESULTADO FINAL: ${resultText}</div>`;
                 }
-
-                html += `
-                    <div class="voting-meta">
-                        <span><i class="ph ph-clock"></i> Cierra: ${new Date(v.deadline).toLocaleString()}</span>
-                        <span>Causa cierre: ${status === 'closed_quorum' ? 'Quorum Alcanzado (42 votos)' : 'Tiempo Agotado'}</span>
-                    </div>
-                </div>`;
-                
+                html += `<div class="voting-meta"><span><i class="ph ph-clock"></i> Cierra: ${new Date(v.deadline).toLocaleString()}</span><span>Causa cierre: ${status === 'closed_quorum' ? 'Quorum Alcanzado' : 'Tiempo Agotado'}</span></div></div>`;
                 list.innerHTML += html;
             }
         }
 
-        async function updateVotingStatus(id, status) {
-            await supabaseClient.from('votings').update({ status: status }).eq('id', id);
-        }
-
+        async function updateVotingStatus(id, status) { await supabaseClient.from('votings').update({ status: status }).eq('id', id); }
         async function submitVote(votingId, choice) {
-            if(!confirm(`¿Estás seguro de votar ${choice === 'yes' ? 'A FAVOR' : 'EN CONTRA'}? Esta acción no se puede deshacer.`)) return;
-
-            // 1. Insertar voto del usuario
-            const { error: voteError } = await supabaseClient.from('user_votes').insert([{
-                voting_id: votingId,
-                username: currentUser.username,
-                choice: choice
-            }]);
-
-            if(voteError) {
-                if(voteError.code === '23505') return alert("Ya has votado en esta consulta.");
-                return alert("Error al votar: " + voteError.message);
-            }
-
-            // 2. Actualizar contadores
-            const incrementField = choice === 'yes' ? 'yes_count' : 'no_count';
-            const { error: updateError } = await supabaseClient.rpc('increment_vote_counts', {
-                v_id: votingId,
-                inc_yes: choice === 'yes' ? 1 : 0,
-                inc_no: choice === 'no' ? 1 : 0
-            });
-
-            // Si RPC falla, hacerlo manualmente (fallback simple)
-            if(updateError) {
-                 console.warn("RPC not available, fetching manual update...");
-                 // Nota: En una app real, crear la función RPC en SQL es mejor para atomicidad.
-                 // Aquí asumiremos que el siguiente loadVotings recargará los datos,
-                 // pero para evitar condiciones de carrera, lo ideal es SQL Function.
-                 // Implementación simplificada: Recargar vista.
-            }
-
-            alert("Voto registrado correctamente");
+            if(!confirm(`¿Votar ${choice === 'yes' ? 'A FAVOR' : 'EN CONTRA'}?`)) return;
+            const { error: voteError } = await supabaseClient.from('user_votes').insert([{ voting_id: votingId, username: currentUser.username, choice: choice }]);
+            if(voteError) { if(voteError.code === '23505') return alert("Ya has votado."); return alert("Error: " + voteError.message); }
+            const { error: updateError } = await supabaseClient.rpc('increment_vote_counts', { v_id: votingId, inc_yes: choice === 'yes' ? 1 : 0, inc_no: choice === 'no' ? 1 : 0 });
+            alert("Voto registrado");
             loadVotings(currentUser.type === 'admin' ? 'admin' : 'owner');
         }
 
-        // --- PDF & BITÁCORA ---
+        // PDF
         let currentVotingForPDF = null;
-
         async function preparePDF(votingId) {
-            // Obtener datos completos
             const { data: voting } = await supabaseClient.from('votings').select('*').eq('id', votingId).single();
             const { data: votes } = await supabaseClient.from('user_votes').select('*').eq('voting_id', votingId).order('voted_at', { ascending: true });
-
             currentVotingForPDF = { voting, votes };
-
-            // Mostrar en modal previsualización
             const logDiv = document.getElementById('log-content');
-            logDiv.innerHTML = `
-                <strong>Tema:</strong> ${voting.title}<br>
-                <strong>Estado:</strong> ${voting.status}<br>
-                <strong>Resultado:</strong> SÍ: ${voting.yes_count} | NO: ${voting.no_count}<br><br>
-                <strong>Bitácora de Votos:</strong><br>
-                ${votes.map(v => `- ${v.username}: ${v.choice.toUpperCase()} (${new Date(v.voted_at).toLocaleString()})`).join('<br>')}
-            `;
-            
+            logDiv.innerHTML = `<strong>Tema:</strong> ${voting.title}<br><strong>Estado:</strong> ${voting.status}<br><strong>Resultado:</strong> SÍ: ${voting.yes_count} | NO: ${voting.no_count}<br><br><strong>Bitácora:</strong><br>${votes.map(v => `- ${v.username}: ${v.choice.toUpperCase()} (${new Date(v.voted_at).toLocaleString()})`).join('<br>')}`;
             document.getElementById('log-modal').classList.add('open');
         }
-
         document.getElementById('btn-download-pdf').addEventListener('click', () => {
             if(!currentVotingForPDF) return;
             const { voting, votes } = currentVotingForPDF;
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            // Encabezado
-            doc.setFontSize(18);
-            doc.text("ACTA DE VOTACIÓN - CONDOMINIO", 20, 20);
-            
-            // Detalles
-            doc.setFontSize(12);
-            doc.text(`Tema: ${voting.title}`, 20, 40);
-            doc.text(`Estado Final: ${voting.status.toUpperCase()}`, 20, 50);
-            doc.text(`Fecha de Cierre: ${new Date(voting.deadline).toLocaleString()}`, 20, 60);
-            
-            // Resultados
-            doc.setFontSize(14);
-            doc.text("RESULTADOS:", 20, 80);
-            doc.setFontSize(12);
-            doc.text(`VOTOS A FAVOR (SÍ): ${voting.yes_count}`, 20, 90);
-            doc.text(`VOTOS EN CONTRA (NO): ${voting.no_count}`, 20, 100);
-            doc.text(`TOTAL PARTICIPACIÓN: ${voting.total_votes}`, 20, 110);
-
-            // Bitácora
-            doc.setFontSize(14);
-            doc.text("BITÁCORA DE SUFRAGIOS:", 20, 130);
-            doc.setFontSize(10);
-            
-            let y = 140;
-            votes.forEach(v => {
-                if(y > 270) { doc.addPage(); y = 20; } // Nueva página si se llena
-                const line = `[${new Date(v.voted_at).toLocaleString()}] Usuario: ${v.username} -> Voto: ${v.choice.toUpperCase()}`;
-                doc.text(line, 20, y);
-                y += 10;
-            });
-
-            // Pie de página
-            doc.setFontSize(8);
-            doc.text("Documento generado automáticamente por el Sistema de Gestión.", 20, 280);
-
+            const { jsPDF } = window.jspdf; const doc = new jsPDF();
+            doc.setFontSize(18); doc.text("ACTA DE VOTACIÓN", 20, 20);
+            doc.setFontSize(12); doc.text(`Tema: ${voting.title}`, 20, 40); doc.text(`Estado Final: ${voting.status.toUpperCase()}`, 20, 50); doc.text(`Fecha: ${new Date(voting.deadline).toLocaleString()}`, 20, 60);
+            doc.setFontSize(14); doc.text("RESULTADOS:", 20, 80); doc.setFontSize(12); doc.text(`SÍ: ${voting.yes_count}`, 20, 90); doc.text(`NO: ${voting.no_count}`, 20, 100); doc.text(`TOTAL: ${voting.total_votes}`, 20, 110);
+            doc.setFontSize(14); doc.text("BITÁCORA DE SUFRAGIOS:", 20, 130); doc.setFontSize(10);
+            let y = 140; votes.forEach(v => { if(y > 270) { doc.addPage(); y = 20; } doc.text(`[${new Date(v.voted_at).toLocaleString()}] ${v.username} -> ${v.choice.toUpperCase()}`, 20, y); y += 10; });
             doc.save(`Acta_Votacion_${voting.id}.pdf`);
         });
 
-        // --- NOTIFICACIONES (Simple) ---
-        async function loadNotifications() {
-            const now = new Date().toISOString();
-            const dismissed = currentUser.dismissed_notifs || [];
-            const { data: allMeetings } = await supabaseClient.from('meetings').select('*').order('created_at', { ascending: false });
-            if(!allMeetings) return;
-            const activeMeetings = allMeetings.filter(m => !dismissed.includes(m.id) && (!m.expires_at || new Date(m.expires_at) > new Date()));
-            
-            document.getElementById('notif-badge').textContent = activeMeetings.length;
-            document.getElementById('notif-badge').style.display = activeMeetings.length > 0 ? 'flex' : 'none';
-            const list = document.getElementById('notif-list');
-            list.innerHTML = activeMeetings.length ? '' : '<div style="padding:1rem; text-align:center; color:#999;">Sin alertas</div>';
-            
-            activeMeetings.forEach(m => {
-                let typeClass = m.type === 'Votación' ? 'type-votacion' : 'type-cobro';
-                list.innerHTML += `<div class="notif-item"><span class="notif-type ${typeClass}">${m.type}</span><div class="notif-title">${m.title}</div><div class="notif-date">${new Date(m.created_at).toLocaleDateString()}</div></div>`;
-            });
+        // MODALES
+        function openOwnerModal(id, apt, user, name) {
+            document.getElementById('edit-owner-id').value = id; document.getElementById('edit-owner-apt').value = apt; document.getElementById('edit-owner-user').value = user; document.getElementById('edit-owner-name').value = name; document.getElementById('edit-owner-pass').value = ''; document.getElementById('owner-modal').classList.add('open');
         }
-        function toggleNotifications() { 
-            const d = document.getElementById('notif-dropdown'); 
-            d.classList.toggle('active'); 
-            if(d.classList.contains('active')) loadNotifications(); 
+        function closeOwnerModal() { document.getElementById('owner-modal').classList.remove('open'); }
+        async function saveOwnerEdit() {
+            const id = document.getElementById('edit-owner-id').value; const apt = document.getElementById('edit-owner-apt').value.trim(); const user = document.getElementById('edit-owner-user').value.trim(); const name = document.getElementById('edit-owner-name').value.trim(); const pass = document.getElementById('edit-owner-pass').value.trim();
+            if(!apt || !user || !name) return alert("Campos obligatorios");
+            const updateData = { numero_apartamento: apt, usuario: user, nombre_propietario: name }; if(pass) updateData.clave = pass;
+            const { error } = await supabaseClient.from('apartments').update(updateData).eq('id', id);
+            if(error) return alert("Error: " + error.message);
+            alert("Actualizado"); closeOwnerModal(); loadTreasurerData();
         }
 
-        // Necesitamos crear la función SQL RPC para incrementar votos atómicamente
-        // Agregaremos esto como un bloque de SQL que el usuario debe ejecutar ANTES de usar la app
+        window.onclick = function(event) { if (!event.target.matches('.bell-container') && !event.target.matches('.bell-container *')) document.getElementById('notif-dropdown').classList.remove('active'); }
     </script>
 </body>
 </html>
 ```
-
