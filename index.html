@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión Condominio - Final</title>
+    <title>Gestión Condominio - Sistema Integral</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -18,12 +18,12 @@
             --text-main: #1f2937;
             --text-muted: #6b7280;
             --border: #e5e7eb;
+            --danger: #ef4444;
             
             --status-paid-bg: #d1fae5;
             --status-paid-text: #065f46;
             --status-unpaid-bg: #fee2e2;
             --status-unpaid-text: #991b1b;
-
             --debt-bg: #ef4444;
             --debt-text: #ffffff;
             --debt-ok-bg: #10b981;
@@ -36,10 +36,24 @@
         /* HEADER */
         .app-header { display: flex; justify-content: flex-end; padding: 1rem 0; margin-bottom: 1rem; position: relative; z-index: 100; }
         .header-actions { display: flex; align-items: center; gap: 1.5rem; }
+        
+        /* ESTADO DE CONEXIÓN */
+        .status-indicator {
+            width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            background: #f3f4f6; color: #9ca3af; font-size: 1.2rem; cursor: pointer; transition: all 0.3s ease; border: 1px solid transparent;
+        }
+        #login-view .status-indicator { position: absolute; top: 15px; right: 15px; z-index: 10; }
+        .status-indicator.connected { background: #dcfce7; color: #16a34a; box-shadow: 0 0 0 2px #dcfce7; border-color: #86efac; }
+        .status-indicator.disconnected { background: #fee2e2; color: var(--danger); border-color: #fca5a5; animation: pulse-red 2s infinite; }
+        .status-indicator.connecting { background: #fef9c3; color: #ca8a04; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+        /* NOTIFICACIONES */
         .bell-container { position: relative; cursor: pointer; font-size: 1.8rem; color: var(--text-main); }
         .bell-container:hover { color: var(--primary); }
-        .badge { position: absolute; top: -5px; right: -5px; background-color: #ef4444; color: white; font-size: 0.75rem; font-weight: bold; height: 20px; min-width: 20px; border-radius: 10px; display: flex; align-items: center; justify-content: center; padding: 0 5px; border: 2px solid white; display: none; }
-        .notifications-dropdown { position: absolute; top: 100%; right: 0; width: 360px; background: white; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid var(--border); display: none; flex-direction: column; margin-top: 0.5rem; overflow: hidden; max-height: 500px;}
+        .badge { position: absolute; top: -5px; right: -5px; background-color: var(--danger); color: white; font-size: 0.75rem; font-weight: bold; height: 20px; min-width: 20px; border-radius: 10px; display: flex; align-items: center; justify-content: center; padding: 0 5px; border: 2px solid white; display: none; }
+        .notifications-dropdown { position: absolute; top: 100%; right: 0; width: 380px; background: white; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid var(--border); display: none; flex-direction: column; margin-top: 0.5rem; overflow: hidden; max-height: 500px;}
         .notifications-dropdown.active { display: flex; }
         .notif-header { padding: 1rem; border-bottom: 1px solid var(--border); font-weight: 700; background: #f9fafb; }
         .notif-list { max-height: 400px; overflow-y: auto; }
@@ -47,20 +61,25 @@
         .notif-item:hover { background: #f9fafb; }
         .notif-type { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.3rem; display: inline-block; padding: 2px 6px; border-radius: 4px; color: white; }
         .type-cobro { background-color: var(--primary); }
-        .type-estado { background-color: #3b82f6; } /* Azul para estado de cuenta */
+        .type-estado { background-color: #3b82f6; }
         .type-ordinaria { background-color: #f59e0b; }
         .type-extraordinaria { background-color: #ea580c; }
         .type-votacion { background-color: #8b5cf6; }
+        .btn-download-file { display: inline-flex; align-items: center; gap: 5px; margin-top: 0.5rem; padding: 0.4rem 0.8rem; background: #eff6ff; color: #2563eb; border-radius: 6px; font-size: 0.8rem; font-weight: 600; text-decoration: none; border: 1px solid #dbeafe; }
+        .btn-download-file:hover { background: #dbeafe; }
         .btn-logout { background: white; border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
         .btn-logout:hover { background: #f3f4f6; }
 
         /* LOGIN */
-        #login-view { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); max-width: 400px; margin: 2rem auto; text-align: center; }
+        #login-view { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); max-width: 400px; margin: 2rem auto; text-align: center; position: relative; }
         .input-group { margin-bottom: 1rem; text-align: left; }
         label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; }
         input, select, textarea { width: 100%; padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; }
         .btn-primary { width: 100%; padding: 0.8rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 1rem; transition: background 0.2s; }
         .btn-primary:hover { background: var(--primary-dark); }
+        .btn-secondary { width: 100%; padding: 0.8rem; background: #6b7280; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
+        .btn-danger { background-color: var(--danger); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+        .btn-danger:hover { background-color: #b91c1c; }
         .dashboard-section { display: none; }
 
         /* CARDS & PANELS */
@@ -84,14 +103,13 @@
         .user-debt-tag.paid { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
         .treasurer-actions { display: flex; gap: 0.5rem; align-items: center; margin-left: 1rem; }
 
-        /* MESES ADMIN (PEQUEÑO) */
+        /* MESES */
         .mini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(55px, 1fr)); gap: 0.4rem; }
         .mini-month { padding: 0.4rem; border-radius: 6px; text-align: center; font-size: 0.65rem; font-weight: 700; cursor: pointer; user-select: none; border: 1px solid transparent; transition: all 0.2s; }
         .mini-month.paid { background-color: var(--status-paid-bg); color: var(--status-paid-text); border-color: #34d399; }
         .mini-month.unpaid { background-color: var(--status-unpaid-bg); color: var(--status-unpaid-text); border-color: #f87171; }
         .mini-month:hover { transform: scale(1.05); opacity: 0.9; }
 
-        /* MESES PROPIETARIO (GRANDE) */
         .header-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
         .apt-badge { background: var(--bg-body); padding: 0.5rem 1rem; border-radius: 50px; font-weight: 700; color: var(--primary); }
         .months-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1rem; }
@@ -112,7 +130,7 @@
         .vote-actions { display: flex; gap: 1rem; margin-top: 1rem; }
         .btn-vote { flex: 1; padding: 1rem; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 1rem; transition: transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
         .btn-yes { background: var(--primary); color: white; }
-        .btn-no { background: #ef4444; color: white; }
+        .btn-no { background: var(--danger); color: white; }
         .btn-vote:hover { transform: translateY(-2px); opacity: 0.9; }
         .voting-meta { font-size: 0.8rem; color: #666; margin-top: 1rem; display: flex; justify-content: space-between; }
         .status-badge { font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; text-transform: uppercase; }
@@ -126,16 +144,22 @@
         .event-row { padding: 1rem 1.5rem; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; }
         .btn-icon { background: none; border: none; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s; }
         .btn-edit { color: #3b82f6; background: #eff6ff; }
-        .btn-delete { color: #ef4444; background: #fef2f2; }
+        .btn-delete { color: var(--danger); background: #fef2f2; }
 
         /* MODALES */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-overlay.open { display: flex; }
         .modal { background: white; padding: 2rem; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); max-height: 90vh; overflow-y: auto;}
         .modal h3 { margin-bottom: 1rem; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; flex-wrap: wrap;}
         .input-row { display: flex; gap: 1rem; }
         .input-row .input-group { flex: 1; }
+        .file-upload-box { border: 2px dashed var(--border); border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.2s; background: #f9fafb; }
+        .file-upload-box:hover { border-color: var(--primary); }
+
+        /* ESTILOS CONFIGURACIÓN */
+        .config-help { font-size: 0.8rem; color: #666; background: #fffbeb; border: 1px solid #fcd34d; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; }
+        .error-log { margin-top: 1rem; font-family: monospace; font-size: 0.8rem; color: #dc2626; background: #fef2f2; padding: 0.5rem; border-radius: 4px; word-break: break-all; display: none;}
     </style>
 </head>
 <body>
@@ -143,12 +167,23 @@
     <div class="container">
         <!-- LOGIN -->
         <div id="login-view">
+            <div id="connection-status" class="status-indicator disconnected" onclick="showConnectionError()" title="Estado de Conexión (Click avanzado)">
+                <i class="ph ph-wifi-slash" id="connection-icon"></i>
+            </div>
+
             <i class="ph ph-buildings" style="font-size: 3rem; color: var(--primary); margin-bottom: 1rem;"></i>
             <h2 style="margin-bottom: 0.5rem;">Acceso al Sistema</h2>
             <p style="color: #666; font-size: 0.9rem; margin-bottom: 1.5rem;">Gestión de Condominio</p>
-            <div class="input-group"><label>Usuario</label><input type="text" id="username" placeholder="Ej: admin0 o APART001"></div>
-            <div class="input-group"><label>Clave</label><input type="password" id="password" placeholder="Tu clave"></div>
-            <button class="btn-primary" onclick="handleLogin()">Ingresar</button>
+            
+            <div id="login-form-wrapper">
+                <div class="input-group"><label>Usuario</label><input type="text" id="username" placeholder="Ej: admin0 o APART001"></div>
+                <div class="input-group"><label>Clave</label><input type="password" id="password" placeholder="Tu clave"></div>
+                <button class="btn-primary" onclick="handleLogin()" id="btn-login">Ingresar</button>
+            </div>
+            
+            <div id="connection-failed-msg" style="display:none; margin-top:1rem; text-align:center; color: #ef4444; font-size: 0.9rem;">
+                Error de conexión. Revisa tu internet o recarga la página.
+            </div>
         </div>
 
         <!-- DASHBOARD WRAPPER -->
@@ -171,7 +206,12 @@
             <div id="admin-panel" style="display: none;">
                 <div class="admin-card">
                     <div class="profile-name">Panel de Administración</div>
-                    <h4 style="margin-bottom: 1rem;">Crear Comunicado</h4>
+                    <div style="display:flex; justify-content:flex-end; margin-bottom:1rem;">
+                        <button class="btn-primary" style="width:auto; margin:0; background-color: #3b82f6;" onclick="openStatementModal()">
+                            <i class="ph ph-file-plus"></i> Nuevo Estado de Cuenta
+                        </button>
+                    </div>
+                    <h4 style="margin-bottom: 1rem;">Crear Comunicado Simple</h4>
                     <div class="input-group"><label>Título</label><input type="text" id="meet-title" placeholder="Ej: Mantenimiento Ascensor"></div>
                     <div class="input-row">
                         <div class="input-group"><label>Fecha</label><input type="datetime-local" id="meet-date"></div>
@@ -194,14 +234,12 @@
                     <button class="btn-primary" style="background-color: #8b5cf6;" onclick="createVoting()"><i class="ph ph-check-square"></i> Lanzar Votación</button>
                 </div>
 
-                <!-- 3. TESORERÍA -->
+                <!-- 3. TESORERÍA (SOLO PARA ADMIN0 Y ADMIN1) -->
                 <div id="treasury-panel" style="display: none;">
-                    
-                    <!-- EDITOR DE CUOTA -->
                     <div class="admin-card" style="border-left: 4px solid var(--primary);">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                             <div>
-                                <h4 style="margin-bottom: 0.5rem;">Configuración de Cuota Mensual</h4>
+                                <h4 style="margin-bottom: 0.5rem;">Configuración de Cuota</h4>
                                 <p style="font-size: 0.9rem; color: #666;">El nuevo mes aparece el día 10.</p>
                             </div>
                             <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -211,8 +249,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- CONTROLES Y ESTADO DE CUENTA (NUEVO) -->
                     <div class="treasurer-controls">
                         <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
                             <i class="ph ph-funnel" style="font-size: 1.2rem;"></i>
@@ -226,19 +262,9 @@
                                 <option value="E">Bloque E (81-82)</option>
                             </select>
                         </div>
-                        
-                        <!-- BOTONES DE ACCIÓN -->
-                        <button class="btn-primary" style="width: auto; margin:0; background-color: #10b981;" onclick="generateMonthlyBillNotification()">
-                            <i class="ph ph-receipt"></i> Emitir Cobro
-                        </button>
-                        
-                        <!-- NUEVO BOTÓN: ENVIAR ESTADO DE CUENTA -->
-                        <button class="btn-primary" style="width: auto; margin:0; background-color: #3b82f6;" onclick="sendStatementNotification()">
-                            <i class="ph ph-file-text"></i> Enviar Estado de Cuenta
-                        </button>
+                        <button class="btn-primary" style="width: auto; margin:0; background-color: #10b981;" onclick="generateMonthlyBillNotification()"><i class="ph ph-receipt"></i> Emitir Cobro</button>
+                        <button class="btn-primary" style="width: auto; margin:0; background-color: #3b82f6;" onclick="openStatementModal()"><i class="ph ph-upload-simple"></i> Subir Estado de Cuenta</button>
                     </div>
-
-                    <!-- LISTA DE APARTAMENTOS -->
                     <div id="treasurer-users-list"></div>
                 </div>
 
@@ -254,7 +280,7 @@
                 <!-- 5. HISTORIAL NOTIFICACIONES -->
                 <div class="events-table-container">
                     <div class="events-header">
-                        <span>Historial de Notificaciones</span>
+                        <span>Historial de Notificaciones y Archivos</span>
                         <button onclick="loadAdminEvents()" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="ph ph-arrows-clockwise"></i></button>
                     </div>
                     <div id="admin-events-list"></div>
@@ -268,10 +294,8 @@
                     <div class="debt-amount" id="owner-debt-amount">₡ 0</div>
                     <div class="debt-note">Cuota mensual: <span id="owner-fee-display">₡ 0</span> (Vence día 10)</div>
                 </div>
-
                 <h3 style="margin-bottom: 1rem;">Votaciones Activas</h3>
                 <div id="owner-votings-list"></div>
-
                 <div class="header-info" style="margin-top: 3rem;">
                     <div>
                         <h3 id="owner-name">Nombre Propietario</h3>
@@ -279,8 +303,51 @@
                     </div>
                     <span class="apt-badge" id="apt-number">Apt #001</span>
                 </div>
-                <!-- MESES -->
                 <div class="months-grid" id="months-display"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIGURACIÓN -->
+    <div class="modal-overlay" id="config-modal">
+        <div class="modal">
+            <h3>⚙️ Configuración Avanzada</h3>
+            <div class="config-help">
+                Estas credenciales ya vienen pre-instaladas en el código.
+            </div>
+            <div class="input-group"><label>Project URL</label><input type="text" id="cfg-url"></div>
+            <div class="input-group"><label>API Key</label><input type="password" id="cfg-key"></div>
+            <div id="connection-error-log" class="error-log"></div>
+            <div class="modal-actions">
+                <button class="btn-danger" onclick="clearCredentials()">Resetear a por Defecto</button>
+                <button class="btn-logout" onclick="closeConfigModal()">Cancelar</button>
+                <button class="btn-primary" onclick="saveConfigAndRetry()">Guardar y Reconectar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ESTADO DE CUENTA -->
+    <div class="modal-overlay" id="statement-modal">
+        <div class="modal">
+            <h3>Subir/Editar Estado de Cuenta</h3>
+            <input type="hidden" id="stmt-id">
+            <div class="input-group"><label>Título</label><input type="text" id="stmt-title" placeholder="Ej: Estado de Cuenta Marzo"></div>
+            <div class="input-group"><label>Descripción</label><textarea id="stmt-desc" rows="2" placeholder="Detalles adicionales..."></textarea></div>
+            <div class="input-row">
+                <div class="input-group"><label>Fecha Emisión</label><input type="datetime-local" id="stmt-date"></div>
+                <div class="input-group"><label>Expira (Ocultar)</label><input type="datetime-local" id="stmt-expires"></div>
+            </div>
+            <div class="input-group">
+                <label>Archivo (PDF/Imagen)</label>
+                <div class="file-upload-box" onclick="document.getElementById('stmt-file').click()">
+                    <i class="ph ph-upload-simple" style="font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem;"></i>
+                    <div style="font-size: 0.9rem;" id="stmt-file-name">Click para seleccionar archivo</div>
+                    <input type="file" id="stmt-file" style="display: none;" onchange="updateFileName(this)">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-logout" onclick="closeStatementModal()">Cancelar</button>
+                <button class="btn-primary" onclick="submitStatement()">Enviar a Todos</button>
             </div>
         </div>
     </div>
@@ -311,54 +378,92 @@
     </div>
 
     <script>
-        // CONFIGURACIÓN
+        // --- CONFIGURACIÓN ---
         let supabaseClient = null;
         let currentUser = null;
         let currentFee = 10000;
-        const START_DATE = new Date(2024, 11); 
+        const START_DATE = new Date(2024, 11);
+        
+        let currentStatementFile = null;
+        let lastConnectionError = null;
+
+        // CREDENCIALES ACTUALIZADAS (NUEVO PROYECTO)
+        const DEFAULT_URL = "https://yeyvnqeephvmtckfkbav.supabase.co";
+        const DEFAULT_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlleXZucWVlcGh2bXRja2ZrYmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyNTQ4MDYsImV4cCI6MjA4NzgzMDgwNn0.UAdteuWlkkrm05eYhs0rY0NM99JribSUj8_iXwUU_Rc";
 
         document.addEventListener('DOMContentLoaded', () => {
-            const url = localStorage.getItem('sb_url');
-            const key = localStorage.getItem('sb_key');
-            if(!url || !key) return alert("Configura credenciales (sb_url, sb_key)");
-            supabaseClient = supabase.createClient(url, key);
+            initSupabase();
+            setInterval(checkConnection, 30000);
         });
 
-        // FECHAS
-        function getMonthsToRender() {
-            let count = 0;
-            const today = new Date();
-            let checkDate = new Date(START_DATE);
-            while(true) {
-                if (checkDate > today) break;
-                const isCurrentMonth = checkDate.getMonth() === today.getMonth() && checkDate.getFullYear() === today.getFullYear();
-                if (isCurrentMonth) {
-                    if (today.getDate() >= 10) count++;
-                } else {
-                    count++;
-                }
-                checkDate.setMonth(checkDate.getMonth() + 1);
-                if(count > 48) break; 
-            }
-            return count;
+        function initSupabase() {
+            let url = localStorage.getItem('sb_url');
+            let key = localStorage.getItem('sb_key');
+            if (!url || !key) { url = DEFAULT_URL; key = DEFAULT_KEY; localStorage.setItem('sb_url', url); localStorage.setItem('sb_key', key); }
+            if(window.supabase) { supabaseClient = window.supabase.createClient(url, key); setTimeout(checkConnection, 1000); } 
+            else { lastConnectionError = "La librería de Supabase no cargó."; updateConnectionStatus('disconnected'); }
         }
 
-        // AUTH
+        // --- VERIFICACIÓN DE CONEXIÓN ---
+        async function checkConnection() {
+            const statusEl = document.getElementById('connection-status');
+            const iconEl = document.getElementById('connection-icon');
+            const loginForm = document.getElementById('login-form-wrapper');
+            const errorMsg = document.getElementById('connection-failed-msg');
+            const btnLogin = document.getElementById('btn-login');
+            if(!statusEl || !iconEl || !supabaseClient) { if(statusEl) updateConnectionStatus('disconnected'); return; }
+            updateConnectionStatus('connecting');
+            try {
+                const { data, error } = await supabaseClient.from('config').select('id, monthly_fee').limit(1).single();
+                if (error) throw error;
+                updateConnectionStatus('connected');
+                if(loginForm) loginForm.style.display = 'block';
+                if(errorMsg) errorMsg.style.display = 'none';
+                if(btnLogin) btnLogin.disabled = false;
+                lastConnectionError = null;
+                if(data && data.monthly_fee) {
+                    currentFee = parseFloat(data.monthly_fee);
+                    document.getElementById('monthly-fee-input').value = currentFee;
+                    document.getElementById('owner-fee-display').textContent = `₡ ${currentFee.toLocaleString()}`;
+                }
+            } catch (err) {
+                console.error("Error de conexión:", err);
+                lastConnectionError = err.message || "Error desconocido";
+                updateConnectionStatus('disconnected');
+                if(loginForm && getComputedStyle(document.getElementById('login-view')).display !== 'none') {
+                    loginForm.style.display = 'none';
+                    if(errorMsg) errorMsg.style.display = 'block';
+                }
+            }
+        }
+
+        function updateConnectionStatus(status) {
+            const statusEl = document.getElementById('connection-status');
+            const iconEl = document.getElementById('connection-icon');
+            statusEl.className = 'status-indicator ' + status;
+            iconEl.className = status === 'connected' ? 'ph ph-wifi-high' : (status === 'connecting' ? 'ph ph-spinner' : 'ph ph-wifi-slash');
+            statusEl.title = status === 'connected' ? 'Conectado' : (status === 'connecting' ? 'Conectando...' : 'Desconectado (Click avanzado)');
+        }
+
+        // --- AUTH ---
         async function handleLogin() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
             if(!user || !pass) return alert("Completa los campos");
-            const { data: adminData } = await supabaseClient.from('admins').select('*').eq('username', user).eq('password', pass).maybeSingle();
-            if (adminData) { currentUser = { type: 'admin', ...adminData }; showDashboard(); return; }
-            const { data: ownerData } = await supabaseClient.from('apartments').select('*').eq('usuario', user).eq('clave', pass).maybeSingle();
-            if (ownerData) { currentUser = { type: 'owner', ...ownerData }; showDashboard(); return; }
-            alert("Usuario o clave incorrectos");
+            try {
+                const { data: adminData, error: adminError } = await supabaseClient.from('admins').select('*').eq('username', user).eq('password', pass).maybeSingle();
+                if (adminError) throw adminError;
+                if (adminData) { currentUser = { type: 'admin', ...adminData }; showDashboard(); return; }
+                const { data: ownerData, error: ownerError } = await supabaseClient.from('apartments').select('*').eq('usuario', user).eq('clave', pass).maybeSingle();
+                if (ownerError) throw ownerError;
+                if (ownerData) { currentUser = { type: 'owner', ...ownerData }; showDashboard(); return; }
+                alert("❌ Usuario o clave incorrectos.");
+            } catch (err) { console.error(err); alert("❌ Error al conectar:\n" + err.message); }
         }
 
         function showDashboard() {
             document.getElementById('login-view').style.display = 'none';
             document.getElementById('dashboard-wrapper').style.display = 'block';
-            
             if (currentUser.type === 'admin') {
                 document.getElementById('admin-panel').style.display = 'block';
                 const isTreasurer = (currentUser.username === 'admin0' || currentUser.username === 'admin1');
@@ -379,6 +484,25 @@
         }
         function logout() { location.reload(); }
 
+        // --- LÓGICA DE GENERACIÓN DE MESES ---
+        function getMonthsToRender() {
+            let count = 0;
+            const today = new Date();
+            let checkDate = new Date(START_DATE); 
+            while(true) {
+                if (checkDate > today) break;
+                const isCurrentMonth = checkDate.getMonth() === today.getMonth() && checkDate.getFullYear() === today.getFullYear();
+                if (isCurrentMonth) {
+                    if (today.getDate() >= 10) count++;
+                } else {
+                    count++;
+                }
+                checkDate.setMonth(checkDate.getMonth() + 1);
+                if(count > 48) break; 
+            }
+            return count;
+        }
+
         // --- NOTIFICACIONES ---
         async function loadNotifications() {
             const now = new Date().toISOString();
@@ -387,7 +511,7 @@
             if(!allMeetings) return;
             const activeMeetings = allMeetings.filter(m => {
                 if(dismissed.includes(m.id)) return false;
-                if(m.expires_at && new Date(m.expires_at) < new Date()) return false;
+                if(m.expires_at && new Date(m.expires_at) < new Date()) return false; 
                 return true;
             });
             document.getElementById('notif-badge').textContent = activeMeetings.length;
@@ -397,7 +521,8 @@
             activeMeetings.forEach(m => {
                 let typeClass = m.type === 'Estado' ? 'type-estado' : (m.type === 'Ordinaria' ? 'type-ordinaria' : (m.type === 'Extraordinaria' ? 'type-extraordinaria' : (m.type === 'Cobro' ? 'type-cobro' : 'type-votacion')));
                 const dateStr = m.event_date ? new Date(m.event_date).toLocaleString('es-ES', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) : new Date(m.created_at).toLocaleDateString();
-                list.innerHTML += `<div class="notif-item"><span class="notif-type ${typeClass}">${m.type}</span><div class="notif-title">${m.title}</div><div style="font-size:0.85rem; color:#555; margin-top:4px;">${m.description}</div><div class="notif-date"><i class="ph ph-calendar-blank"></i> ${dateStr}</div></div>`;
+                let attachmentHtml = m.attachment_url ? `<a href="${m.attachment_url}" target="_blank" class="btn-download-file"><i class="ph ph-download-simple"></i> Ver Archivo</a>` : '';
+                list.innerHTML += `<div class="notif-item"><span class="notif-type ${typeClass}">${m.type}</span><div class="notif-title">${m.title}</div><div style="font-size:0.85rem; color:#555; margin-top:4px;">${m.description}</div>${attachmentHtml}<div class="notif-date"><i class="ph ph-calendar-blank"></i> ${dateStr}</div></div>`;
             });
         }
         function toggleNotifications() { const d = document.getElementById('notif-dropdown'); d.classList.toggle('active'); if(d.classList.contains('active')) loadNotifications(); }
@@ -413,8 +538,13 @@
                 const isExpired = m.expires_at && new Date(m.expires_at) < now;
                 let typeColor = m.type === 'Estado' ? '#3b82f6' : (m.type === 'Ordinaria' ? '#f59e0b' : (m.type === 'Extraordinaria' ? '#ea580c' : (m.type === 'Cobro' ? '#10b981' : '#8b5cf6')));
                 if(isExpired) typeColor = '#9ca3af';
+                let fileIcon = m.attachment_url ? '<i class="ph ph-file-pdf" style="margin-left:5px;"></i>' : '';
                 const dateDisplay = m.event_date ? new Date(m.event_date).toLocaleDateString('es-ES') : '-';
-                list.innerHTML += `<div class="event-row" style="${isExpired ? 'opacity:0.7' : ''}"><div class="event-info"><h4 style="color:${typeColor}">${m.title}</h4><div class="event-meta"><span>${m.type}</span><span>•</span><span>${dateDisplay}</span></div></div><div class="event-actions"><button class="btn-icon btn-delete" onclick="deleteEvent('${m.id}')"><i class="ph ph-trash"></i></button></div></div>`;
+                let actions = `<button class="btn-icon btn-delete" onclick="deleteEvent('${m.id}')"><i class="ph ph-trash"></i></button>`;
+                if(m.type === 'Estado') {
+                    actions = `<button class="btn-icon btn-edit" onclick="openStatementModal('${m.id}')" title="Editar"><i class="ph ph-pencil-simple"></i></button><button class="btn-icon btn-delete" onclick="deleteEvent('${m.id}')"><i class="ph ph-trash"></i></button>`;
+                }
+                list.innerHTML += `<div class="event-row" style="${isExpired ? 'opacity:0.7' : ''}"><div class="event-info"><h4 style="color:${typeColor}">${m.title} ${fileIcon}</h4><div class="event-meta"><span>${m.type}</span><span>•</span><span>${dateDisplay}</span></div></div><div class="event-actions">${actions}</div></div>`;
             });
         }
         async function createMeeting() {
@@ -436,7 +566,53 @@
             loadAdminEvents();
         }
 
-        // --- TESORERIA ---
+        // --- ESTADO DE CUENTA ---
+        function openStatementModal(editId = null) {
+            document.getElementById('stmt-id').value = editId || '';
+            document.getElementById('stmt-title').value = '';
+            document.getElementById('stmt-desc').value = '';
+            document.getElementById('stmt-date').value = '';
+            document.getElementById('stmt-expires').value = '';
+            document.getElementById('stmt-file').value = '';
+            document.getElementById('stmt-file-name').textContent = 'Click para seleccionar archivo';
+            currentStatementFile = null;
+            if(editId) alert("Para editar, cargará los datos existentes. Si sube un nuevo archivo, reemplazará al anterior.");
+            document.getElementById('statement-modal').classList.add('open');
+        }
+        function closeStatementModal() { document.getElementById('statement-modal').classList.remove('open'); }
+        function updateFileName(input) { if (input.files && input.files[0]) { document.getElementById('stmt-file-name').textContent = input.files[0].name; currentStatementFile = input.files[0]; } }
+        async function submitStatement() {
+            const id = document.getElementById('stmt-id').value;
+            const title = document.getElementById('stmt-title').value || 'Estado de Cuenta';
+            const desc = document.getElementById('stmt-desc').value || '';
+            const dateVal = document.getElementById('stmt-date').value;
+            const expiresVal = document.getElementById('stmt-expires').value;
+            let attachmentUrl = null;
+            if (currentStatementFile) {
+                const fileName = `${Date.now()}_${currentStatementFile.name}`;
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage.from('statements').upload(`public/${fileName}`, currentStatementFile);
+                if (uploadError) return alert("Error subiendo archivo: " + uploadError.message);
+                const { data: publicUrlData } = supabaseClient.storage.from('statements').getPublicUrl(`public/${fileName}`);
+                attachmentUrl = publicUrlData.publicUrl;
+            }
+            const payload = { title, type: 'Estado', description: desc || 'Se ha publicado un nuevo estado de cuenta.', created_by: currentUser.username, event_date: dateVal ? new Date(dateVal).toISOString() : new Date().toISOString(), expires_at: expiresVal ? new Date(expiresVal).toISOString() : null };
+            if (attachmentUrl) payload.attachment_url = attachmentUrl;
+            if (id) {
+                if(attachmentUrl) payload.attachment_url = attachmentUrl;
+                const { error } = await supabaseClient.from('meetings').update(payload).eq('id', id);
+                if(error) return alert("Error actualizando: " + error.message);
+                alert("Estado de cuenta actualizado");
+            } else {
+                if(!attachmentUrl) return alert("Debes subir un archivo para el estado de cuenta");
+                const { error } = await supabaseClient.from('meetings').insert([payload]);
+                if(error) return alert("Error creando: " + error.message);
+                alert("Estado de cuenta enviado a todos");
+            }
+            closeStatementModal();
+            loadAdminEvents();
+        }
+
+        // --- TESORERÍA Y CONTROL DE PAGOS ---
         async function loadFeeConfig() {
             const { data } = await supabaseClient.from('config').select('monthly_fee').eq('id', 1).single();
             if(data) { currentFee = parseFloat(data.monthly_fee); document.getElementById('monthly-fee-input').value = currentFee; document.getElementById('owner-fee-display').textContent = `₡ ${currentFee.toLocaleString()}`; }
@@ -448,8 +624,6 @@
             if(error) return alert("Error guardando cuota: " + error.message);
             alert("Cuota actualizada"); loadFeeConfig(); loadTreasurerData();
         }
-        
-        // EMITIR COBRO
         async function generateMonthlyBillNotification() {
             const today = new Date();
             const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -465,50 +639,14 @@
             if(error) return alert("Error: " + error.message);
             alert("Cobro emitido"); loadAdminEvents();
         }
-
-        // NUEVO: ENVIAR ESTADO DE CUENTA
-        async function sendStatementNotification() {
-            const today = new Date();
-            const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-            const monthName = monthNames[today.getMonth()];
-            
-            const title = `Estado de Cuenta - ${monthName}`;
-            // Evitar spam si se envió hace menos de 24 horas
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            
-            const { data: existing } = await supabaseClient.from('meetings').select('*').eq('title', title).eq('type', 'Estado').gte('created_at', yesterday.toISOString()).maybeSingle();
-
-            if (existing) {
-                return alert("Ya se envió un estado de cuenta recientemente (hace menos de 24 horas).");
-            }
-
-            if (!confirm(`¿Enviar alerta de Estado de Cuenta a todos los propietarios?`)) return;
-
-            // Expira en 7 días
-            const expiresDate = new Date();
-            expiresDate.setDate(expiresDate.getDate() + 7);
-
-            const { error } = await supabaseClient.from('meetings').insert([{
-                title: title,
-                type: 'Estado',
-                description: `Se ha emitido su estado de cuenta actual. Por favor revise su panel principal para ver el detalle de su deuda y pagos.`,
-                created_by: currentUser.username,
-                event_date: new Date().toISOString(),
-                expires_at: expiresDate.toISOString()
-            }]);
-
-            if(error) return alert("Error: " + error.message);
-            alert("Estado de cuenta enviado a todos los usuarios");
-            loadAdminEvents();
-        }
-
+        
         async function loadTreasurerData() {
             const filterBlock = document.getElementById('block-filter').value;
             const { data: owners } = await supabaseClient.from('apartments').select('*').order('numero_apartamento');
             const list = document.getElementById('treasurer-users-list');
             list.innerHTML = '';
             if(!owners) return;
+            
             const filteredOwners = owners.filter(owner => {
                 const apt = parseInt(owner.numero_apartamento);
                 if (filterBlock === 'all') return true;
@@ -519,6 +657,7 @@
                 if (filterBlock === 'E') return apt >= 81 && apt <= 82;
                 return true;
             });
+            
             const monthsToShow = getMonthsToRender();
 
             filteredOwners.forEach(owner => {
@@ -526,6 +665,7 @@
                 const unpaidCount = monthsToShow - paidMonths.length; 
                 const debt = unpaidCount * currentFee;
                 const isDebtFree = debt <= 0;
+                
                 let html = `
                 <div class="treasurer-row">
                     <div class="treasurer-header">
@@ -551,6 +691,7 @@
                 list.innerHTML += html;
             });
         }
+
         function generateMiniGridHTML(userId, paidMonths, limit) {
             let html = '';
             const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
@@ -570,13 +711,13 @@
             const wasPaid = element.classList.contains('paid');
             if(wasPaid) { element.classList.remove('paid'); element.classList.add('unpaid'); } 
             else { element.classList.remove('unpaid'); element.classList.add('paid'); }
-
+            
             const { data: owner } = await supabaseClient.from('apartments').select('meses_pagados, dismissed_notifs').eq('id', userId).single();
             if(!owner) return alert("Error cargando datos");
             
             let months = owner.meses_pagados || [];
             let dismissed = owner.dismissed_notifs || [];
-
+            
             if (wasPaid) { 
                 months = months.filter(m => m !== monthId); 
             } else { 
@@ -589,27 +730,35 @@
                     }
                 }
             }
-
             const { error } = await supabaseClient.from('apartments').update({ meses_pagados: months, dismissed_notifs: dismissed }).eq('id', userId);
-            if(error) {
+            if(error) { 
                 alert("Error: " + error.message);
                 if(wasPaid) { element.classList.add('paid'); element.classList.remove('unpaid'); }
                 else { element.classList.add('unpaid'); element.classList.remove('paid'); }
-            } else { loadTreasurerData(); }
+            } else { 
+                loadTreasurerData(); 
+            }
         }
 
-        // --- PROPIETARIO VIEW ---
+        // --- VISTA DEL PROPIETARIO ---
         function renderOwnerView() {
             const monthsToShow = getMonthsToRender(); 
             const paidMonths = currentUser.meses_pagados || [];
             const unpaidCount = monthsToShow - paidMonths.length;
             const totalDebt = unpaidCount * currentFee;
+            
             const debtCard = document.getElementById('owner-debt-card');
             const debtAmount = document.getElementById('owner-debt-amount');
-            if (totalDebt > 0) { debtCard.classList.remove('paid-up'); debtAmount.textContent = `₡ ${totalDebt.toLocaleString()}`; } 
-            else { debtCard.classList.add('paid-up'); debtAmount.textContent = "AL DÍA"; }
+            if (totalDebt > 0) { 
+                debtCard.classList.remove('paid-up'); 
+                debtAmount.textContent = `₡ ${totalDebt.toLocaleString()}`; 
+            } else { 
+                debtCard.classList.add('paid-up'); 
+                debtAmount.textContent = "AL DÍA"; 
+            }
             renderPaymentGrid(paidMonths, monthsToShow);
         }
+        
         function renderPaymentGrid(paidMonths, limit) {
             const grid = document.getElementById('months-display');
             grid.innerHTML = '';
@@ -644,7 +793,6 @@
             document.getElementById('vote-title').value = ''; document.getElementById('vote-desc').value = '';
             loadVotings('admin');
         }
-
         async function loadVotings(viewType) {
             let query = supabaseClient.from('votings').select('*').order('created_at', { ascending: false });
             const { data: votings } = await query;
@@ -653,7 +801,6 @@
             list.innerHTML = '';
             if(!votings || votings.length === 0) { list.innerHTML = '<div style="text-align:center; color:#999; padding:1rem;">No hay votaciones.</div>'; return; }
             const now = new Date();
-
             for(let v of votings) {
                 let status = v.status;
                 let isClosed = false;
@@ -662,11 +809,9 @@
                     else if (v.total_votes >= v.quorum) { status = 'closed_quorum'; isClosed = true; await updateVotingStatus(v.id, 'closed_quorum'); }
                 } else { isClosed = true; }
                 if (viewType === 'owner' && v.target_audience === 'admins') continue;
-                
                 const yesPct = v.total_votes > 0 ? Math.round((v.yes_count / v.total_votes) * 100) : 0;
                 const noPct = v.total_votes > 0 ? Math.round((v.no_count / v.total_votes) * 100) : 0;
                 let html = `<div class="voting-card" style="border-left: 5px solid ${isClosed ? '#9ca3af' : '#8b5cf6'}"><div class="voting-header"><div class="voting-title">${v.title} <span class="status-badge ${isClosed ? 'status-closed' : 'status-active'}">${isClosed ? 'CERRADA' : 'ACTIVA'}</span></div>${viewType === 'admin' ? `<button class="btn-download" onclick="preparePDF(${v.id})"><i class="ph ph-file-pdf"></i> Acta</button>` : ''}</div><div class="voting-desc">${v.description}</div><div class="voting-stats"><div class="stat-box stat-yes">SÍ<br><span style="font-size:1.5rem">${v.yes_count}</span> (${yesPct}%)</div><div class="stat-box stat-no">NO<br><span style="font-size:1.5rem">${v.no_count}</span> (${noPct}%)</div><div class="stat-box stat-total">TOTAL<br><span style="font-size:1.5rem">${v.total_votes} / ${v.quorum}</span></div></div>`;
-                
                 if (!isClosed) {
                     const { data: myVote } = await supabaseClient.from('user_votes').select('*').eq('voting_id', v.id).eq('username', currentUser.username).maybeSingle();
                     if (myVote) { html += `<div style="text-align:center; color:var(--primary); font-weight:bold;">Ya has votado: ${myVote.choice === 'yes' ? 'A FAVOR' : 'EN CONTRA'}</div>`; }
@@ -679,7 +824,6 @@
                 list.innerHTML += html;
             }
         }
-
         async function updateVotingStatus(id, status) { await supabaseClient.from('votings').update({ status: status }).eq('id', id); }
         async function submitVote(votingId, choice) {
             if(!confirm(`¿Votar ${choice === 'yes' ? 'A FAVOR' : 'EN CONTRA'}?`)) return;
@@ -717,6 +861,33 @@
             document.getElementById('edit-owner-id').value = id; document.getElementById('edit-owner-apt').value = apt; document.getElementById('edit-owner-user').value = user; document.getElementById('edit-owner-name').value = name; document.getElementById('edit-owner-pass').value = ''; document.getElementById('owner-modal').classList.add('open');
         }
         function closeOwnerModal() { document.getElementById('owner-modal').classList.remove('open'); }
+        function openConfigModal() {
+            document.getElementById('cfg-url').value = localStorage.getItem('sb_url') || '';
+            document.getElementById('cfg-key').value = localStorage.getItem('sb_key') || '';
+            document.getElementById('connection-error-log').textContent = lastConnectionError || '';
+            document.getElementById('connection-error-log').style.display = lastConnectionError ? 'block' : 'none';
+            document.getElementById('config-modal').classList.add('open');
+        }
+        function closeConfigModal() { document.getElementById('config-modal').classList.remove('open'); }
+        function clearCredentials() { if(confirm("¿Borrar configuración y volver a los valores pre-instalados?")) { localStorage.removeItem('sb_url'); localStorage.removeItem('sb_key'); location.reload(); } }
+        function saveConfigAndRetry() {
+            const newUrl = document.getElementById('cfg-url').value.trim();
+            const newKey = document.getElementById('cfg-key').value.trim();
+            if (!newUrl || !newKey) return alert("Ingresa URL y Key");
+            localStorage.setItem('sb_url', newUrl);
+            localStorage.setItem('sb_key', newKey);
+            closeConfigModal();
+            initSupabase();
+            setTimeout(checkConnection, 500);
+        }
+        function showConnectionError() {
+            if (lastConnectionError) { openConfigModal(); }
+            else {
+                const status = document.getElementById('connection-status');
+                if(status.classList.contains('connected')) alert("La conexión es correcta.");
+                else openConfigModal();
+            }
+        }
         async function saveOwnerEdit() {
             const id = document.getElementById('edit-owner-id').value; const apt = document.getElementById('edit-owner-apt').value.trim(); const user = document.getElementById('edit-owner-user').value.trim(); const name = document.getElementById('edit-owner-name').value.trim(); const pass = document.getElementById('edit-owner-pass').value.trim();
             if(!apt || !user || !name) return alert("Campos obligatorios");
