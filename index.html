@@ -6,6 +6,7 @@
     <title>Gestión Condominio - Sistema Integral</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Cargamos Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -40,17 +41,20 @@
         /* ESTADO DE CONEXIÓN */
         .status-indicator {
             width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            background: #f3f4f6; color: #9ca3af; font-size: 1.2rem; cursor: help; transition: all 0.3s ease; border: 1px solid transparent;
+            background: #f3f4f6; color: #9ca3af; font-size: 1.2rem; cursor: pointer; transition: all 0.3s ease; border: 1px solid transparent;
         }
         /* Posicionamiento en Login */
         #login-view .status-indicator {
             position: absolute; top: 15px; right: 15px; z-index: 10;
         }
         .status-indicator.connected { background: #dcfce7; color: #16a34a; box-shadow: 0 0 0 2px #dcfce7; border-color: #86efac; }
-        .status-indicator.disconnected { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+        .status-indicator.disconnected { background: #fee2e2; color: #dc2626; border-color: #fca5a5; animation: pulse-red 2s infinite; }
         .status-indicator.connecting { background: #fef9c3; color: #ca8a04; animation: pulse 1.5s infinite; }
+        
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
 
+        /* NOTIFICACIONES */
         .bell-container { position: relative; cursor: pointer; font-size: 1.8rem; color: var(--text-main); }
         .bell-container:hover { color: var(--primary); }
         .badge { position: absolute; top: -5px; right: -5px; background-color: #ef4444; color: white; font-size: 0.75rem; font-weight: bold; height: 20px; min-width: 20px; border-radius: 10px; display: flex; align-items: center; justify-content: center; padding: 0 5px; border: 2px solid white; display: none; }
@@ -90,6 +94,7 @@
         input, select, textarea { width: 100%; padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; }
         .btn-primary { width: 100%; padding: 0.8rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 1rem; transition: background 0.2s; }
         .btn-primary:hover { background: var(--primary-dark); }
+        .btn-secondary { width: 100%; padding: 0.8rem; background: #6b7280; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
         .dashboard-section { display: none; }
 
         /* CARDS & PANELS */
@@ -169,6 +174,10 @@
             cursor: pointer; transition: border-color 0.2s; background: #f9fafb;
         }
         .file-upload-box:hover { border-color: var(--primary); }
+
+        /* ESTILOS PARA EL MODAL DE CONFIGURACIÓN */
+        .config-help { font-size: 0.8rem; color: #666; background: #fffbeb; border: 1px solid #fcd34d; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; }
+        .error-log { margin-top: 1rem; font-family: monospace; font-size: 0.8rem; color: #dc2626; background: #fef2f2; padding: 0.5rem; border-radius: 4px; word-break: break-all; display: none;}
     </style>
 </head>
 <body>
@@ -176,17 +185,25 @@
     <div class="container">
         <!-- LOGIN -->
         <div id="login-view">
-            <!-- ICONO DE CONEXIÓN (VISIBLE DESDE EL INICIO) -->
-            <div id="connection-status" class="status-indicator disconnected" title="Estado de conexión">
+            <!-- ICONO DE CONEXIÓN MEJORADO -->
+            <div id="connection-status" class="status-indicator disconnected" onclick="showConnectionError()" title="Clic para ver estado">
                 <i class="ph ph-wifi-slash" id="connection-icon"></i>
             </div>
 
             <i class="ph ph-buildings" style="font-size: 3rem; color: var(--primary); margin-bottom: 1rem;"></i>
             <h2 style="margin-bottom: 0.5rem;">Acceso al Sistema</h2>
             <p style="color: #666; font-size: 0.9rem; margin-bottom: 1.5rem;">Gestión de Condominio</p>
-            <div class="input-group"><label>Usuario</label><input type="text" id="username" placeholder="Ej: admin0 o APART001"></div>
-            <div class="input-group"><label>Clave</label><input type="password" id="password" placeholder="Tu clave"></div>
-            <button class="btn-primary" onclick="handleLogin()">Ingresar</button>
+            
+            <div id="login-form-wrapper">
+                <div class="input-group"><label>Usuario</label><input type="text" id="username" placeholder="Ej: admin0 o APART001"></div>
+                <div class="input-group"><label>Clave</label><input type="password" id="password" placeholder="Tu clave"></div>
+                <button class="btn-primary" onclick="handleLogin()" id="btn-login">Ingresar</button>
+            </div>
+            
+            <div id="connection-failed-msg" style="display:none; margin-top:1rem; text-align:center;">
+                <p style="color: #ef4444; font-weight:bold; margin-bottom:0.5rem;">Error de Conexión</p>
+                <button class="btn-secondary" onclick="openConfigModal()">⚙️ Configurar Conexión</button>
+            </div>
         </div>
 
         <!-- DASHBOARD WRAPPER -->
@@ -323,6 +340,32 @@
         </div>
     </div>
 
+    <!-- MODAL CONFIGURACIÓN DE CONEXIÓN (NUEVO) -->
+    <div class="modal-overlay" id="config-modal">
+        <div class="modal">
+            <h3>⚙️ Configuración de Conexión</h3>
+            <div class="config-help">
+                Si la aplicación no conecta, verifica que tu proyecto en Supabase esté activo y que la tabla <code>config</code> exista. Pega aquí tus credenciales.
+            </div>
+            
+            <div class="input-group">
+                <label>Project URL</label>
+                <input type="text" id="cfg-url" placeholder="https://xyz.supabase.co">
+            </div>
+            <div class="input-group">
+                <label>API Key (public/anon)</label>
+                <input type="password" id="cfg-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+            </div>
+
+            <div id="connection-error-log" class="error-log"></div>
+
+            <div class="modal-actions">
+                <button class="btn-logout" onclick="closeConfigModal()">Cancelar</button>
+                <button class="btn-primary" onclick="saveConfigAndRetry()">Guardar y Reconectar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL ESTADO DE CUENTA (ARCHIVO) -->
     <div class="modal-overlay" id="statement-modal">
         <div class="modal">
@@ -383,65 +426,166 @@
         let currentFee = 10000;
         const START_DATE = new Date(2024, 11); 
         let currentStatementFile = null;
+        let lastConnectionError = null;
 
-        // --- ACTUALIZACIÓN DE CREDENCIALES ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Nuevas credenciales hardcodeadas para asegurar conexión
-            const defaultUrl = "https://dudwerbbxycvgjetlkng.supabase.co";
-            const defaultKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1ZHdlcmJieHljdmdqZXRsa25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwODI1MDIsImV4cCI6MjA0NzY1ODUwMn0.u7_e2YwpgLYN-cmlu7WZ-xK3jy51cDFEcL_RRxav1JA";
-
-            // Prioridad 1: Usar credenciales guardadas en LocalStorage (si las hay)
-            // Prioridad 2: Si no hay credenciales guardadas, usar las nuevas por defecto y guardarlas.
-            const url = localStorage.getItem('sb_url') || defaultUrl;
-            const key = localStorage.getItem('sb_key') || defaultKey;
-
-            if (!localStorage.getItem('sb_url')) localStorage.setItem('sb_url', defaultUrl);
-            if (!localStorage.getItem('sb_key')) localStorage.setItem('sb_key', defaultKey);
-
-            if(!url || !key) return alert("Error de credenciales");
-
-            supabaseClient = supabase.createClient(url, key);
-            
-            // Verificar conexión al iniciar
-            setTimeout(checkConnection, 1000);
-            // Verificar conexión cada 30 segundos
+            initSupabase();
+            // Verificar conexión periódicamente
             setInterval(checkConnection, 30000);
         });
 
-        // --- VERIFICACIÓN DE CONEXIÓN A SUPABASE ---
+        // --- INICIALIZACIÓN DE SUPABASE ---
+        function initSupabase() {
+            // 1. Intentar obtener de LocalStorage
+            let url = localStorage.getItem('sb_url');
+            let key = localStorage.getItem('sb_key');
+
+            // 2. Si no hay, usar defaults (del código original)
+            if (!url || !key) {
+                const defaultUrl = "https://dudwerbbxycvgjetlkng.supabase.co";
+                const defaultKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1ZHdlcmJieHljdmdqZXRsa25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwODI1MDIsImV4cCI6MjA0NzY1ODUwMn0.u7_e2YwpgLYN-cmlu7WZ-xK3jy51cDFEcL_RRxav1JA";
+                
+                url = url || defaultUrl;
+                key = key || defaultKey;
+                
+                // Guardamos defaults en LS para persistencia
+                localStorage.setItem('sb_url', url);
+                localStorage.setItem('sb_key', key);
+            }
+
+            // 3. Crear cliente
+            if(window.supabase) {
+                supabaseClient = window.supabase.createClient(url, key);
+                setTimeout(checkConnection, 1000); // Chequear conexión 1s después de cargar
+            } else {
+                lastConnectionError = "Error: Librería de Supabase no cargó correctamente.";
+                updateConnectionStatus('disconnected');
+            }
+        }
+
+        // --- MODAL DE CONFIGURACIÓN ---
+        function openConfigModal() {
+            document.getElementById('cfg-url').value = localStorage.getItem('sb_url') || '';
+            document.getElementById('cfg-key').value = localStorage.getItem('sb_key') || '';
+            document.getElementById('connection-error-log').textContent = lastConnectionError || '';
+            document.getElementById('connection-error-log').style.display = lastConnectionError ? 'block' : 'none';
+            document.getElementById('config-modal').classList.add('open');
+        }
+
+        function closeConfigModal() {
+            document.getElementById('config-modal').classList.remove('open');
+        }
+
+        function saveConfigAndRetry() {
+            const newUrl = document.getElementById('cfg-url').value.trim();
+            const newKey = document.getElementById('cfg-key').value.trim();
+
+            if (!newUrl || !newKey) return alert("Por favor ingresa URL y Key");
+
+            localStorage.setItem('sb_url', newUrl);
+            localStorage.setItem('sb_key', newKey);
+            
+            closeConfigModal();
+            // Reiniciar cliente
+            initSupabase();
+            // Forzar chequeo inmediato
+            setTimeout(checkConnection, 500);
+        }
+
+        function showConnectionError() {
+            if (lastConnectionError) {
+                alert("Detalle del Error:\n" + lastConnectionError);
+                openConfigModal();
+            } else {
+                const status = document.getElementById('connection-status');
+                if(status.classList.contains('connected')) {
+                    alert("La conexión a Supabase es correcta.");
+                } else {
+                    openConfigModal();
+                }
+            }
+        }
+
+        // --- VERIFICACIÓN DE CONEXIÓN ---
         async function checkConnection() {
             const statusEl = document.getElementById('connection-status');
             const iconEl = document.getElementById('connection-icon');
+            const loginForm = document.getElementById('login-form-wrapper');
+            const errorMsg = document.getElementById('connection-failed-msg');
+            const btnLogin = document.getElementById('btn-login');
             
             if(!statusEl || !iconEl || !supabaseClient) {
-                if(statusEl) {
-                    statusEl.className = 'status-indicator disconnected';
-                    statusEl.title = 'Cliente no inicializado';
-                    iconEl.className = 'ph ph-wifi-slash';
-                }
+                if(statusEl) updateConnectionStatus('disconnected');
                 return;
             }
 
-            // Estado "Conectando" (Amarillo)
-            statusEl.className = 'status-indicator connecting';
-            statusEl.title = 'Verificando conexión...';
-            iconEl.className = 'ph ph-spinner';
+            // Estado "Conectando"
+            updateConnectionStatus('connecting');
 
             try {
-                // Petición ligera para probar conexión
-                const { data, error } = await supabaseClient.from('config').select('id').limit(1).single();
+                // Intentamos hacer un SELECT simple a la tabla 'config'
+                // Si esta tabla no existe o no hay permiso, fallará aquí.
+                const { data, error } = await supabaseClient
+                    .from('config')
+                    .select('id, monthly_fee')
+                    .limit(1)
+                    .single();
+
                 if (error) throw error;
 
-                // Éxito (Verde)
-                statusEl.className = 'status-indicator connected';
-                statusEl.title = 'Conectado a Supabase';
-                iconEl.className = 'ph ph-wifi-high';
+                // Si llegamos aquí, conexión OK
+                updateConnectionStatus('connected');
+                
+                // Si la conexión se restablece, mostrar login de nuevo
+                if(loginForm) loginForm.style.display = 'block';
+                if(errorMsg) errorMsg.style.display = 'none';
+                if(btnLogin) btnLogin.disabled = false;
+                
+                lastConnectionError = null;
+
+                // Cargar cuota si tenemos datos
+                if(data && data.monthly_fee) {
+                    currentFee = parseFloat(data.monthly_fee);
+                    document.getElementById('monthly-fee-input').value = currentFee;
+                    document.getElementById('owner-fee-display').textContent = `₡ ${currentFee.toLocaleString()}`;
+                }
 
             } catch (err) {
                 console.error("Error de conexión:", err);
-                // Error (Rojo)
-                statusEl.className = 'status-indicator disconnected';
-                statusEl.title = 'Sin conexión a Supabase';
+                let msg = err.message || "Error desconocido";
+                
+                // Personalizar mensaje de error para ayudar al usuario
+                if(msg.includes('JWT')) msg = "Error: La API Key es inválida o ha expirado.";
+                if(msg.includes('relation "config" does not exist')) msg = "Error: No existe la tabla 'config' en tu base de datos Supabase.";
+                if(msg.includes('Failed to fetch')) msg = "Error de Red: No se puede alcanzar el servidor. Verifica la URL.";
+
+                lastConnectionError = msg;
+                
+                // UI Error
+                updateConnectionStatus('disconnected');
+                
+                // Si estamos en la pantalla de login, ocultar form y mostrar error
+                if(loginForm && getComputedStyle(document.getElementById('login-view')).display !== 'none') {
+                    loginForm.style.display = 'none';
+                    if(errorMsg) errorMsg.style.display = 'block';
+                }
+            }
+        }
+
+        function updateConnectionStatus(status) {
+            const statusEl = document.getElementById('connection-status');
+            const iconEl = document.getElementById('connection-icon');
+            
+            statusEl.className = 'status-indicator ' + status;
+            
+            if (status === 'connected') {
+                statusEl.title = 'Conectado a Supabase';
+                iconEl.className = 'ph ph-wifi-high';
+            } else if (status === 'connecting') {
+                statusEl.title = 'Verificando conexión...';
+                iconEl.className = 'ph ph-spinner';
+            } else {
+                statusEl.title = 'Sin conexión (Clic para arreglar)';
                 iconEl.className = 'ph ph-wifi-slash';
             }
         }
@@ -470,10 +614,13 @@
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
             if(!user || !pass) return alert("Completa los campos");
+            
             const { data: adminData } = await supabaseClient.from('admins').select('*').eq('username', user).eq('password', pass).maybeSingle();
             if (adminData) { currentUser = { type: 'admin', ...adminData }; showDashboard(); return; }
+            
             const { data: ownerData } = await supabaseClient.from('apartments').select('*').eq('usuario', user).eq('clave', pass).maybeSingle();
             if (ownerData) { currentUser = { type: 'owner', ...ownerData }; showDashboard(); return; }
+            
             alert("Usuario o clave incorrectos");
         }
 
@@ -501,14 +648,13 @@
         }
         function logout() { location.reload(); }
 
-        // --- NOTIFICACIONES (Con Archivos) ---
+        // --- NOTIFICACIONES ---
         async function loadNotifications() {
             const now = new Date().toISOString();
             const dismissed = currentUser.dismissed_notifs || [];
             const { data: allMeetings } = await supabaseClient.from('meetings').select('*').order('created_at', { ascending: false });
             if(!allMeetings) return;
             
-            // Filtro: No descartada + No expirada
             const activeMeetings = allMeetings.filter(m => {
                 if(dismissed.includes(m.id)) return false;
                 if(m.expires_at && new Date(m.expires_at) < new Date()) return false; 
@@ -534,7 +680,7 @@
         }
         function toggleNotifications() { const d = document.getElementById('notif-dropdown'); d.classList.toggle('active'); if(d.classList.contains('active')) loadNotifications(); }
 
-        // --- ADMIN EVENTS (Con Edición de Archivos) ---
+        // --- ADMIN EVENTS ---
         async function loadAdminEvents() {
             const { data } = await supabaseClient.from('meetings').select('*').order('created_at', { ascending: false });
             const list = document.getElementById('admin-events-list');
@@ -578,7 +724,7 @@
             loadAdminEvents();
         }
 
-        // --- GESTIÓN DE ESTADO DE CUENTA (ARCHIVOS) ---
+        // --- ESTADO DE CUENTA ---
         function openStatementModal(editId = null) {
             document.getElementById('stmt-id').value = editId || '';
             document.getElementById('stmt-title').value = '';
