@@ -80,6 +80,7 @@
         .btn-secondary { width: 100%; padding: 0.8rem; background: #6b7280; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
         .btn-danger { background-color: var(--danger); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
         .btn-danger:hover { background-color: #b91c1c; }
+        .btn-warning { background-color: #f59e0b; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; margin-top: 0.5rem; width: 100%; }
         .dashboard-section { display: none; }
 
         /* CARDS & PANELS */
@@ -182,6 +183,12 @@
                 <button class="btn-primary" onclick="handleLogin()" id="btn-login">Ingresar</button>
             </div>
             
+            <!-- BOTÓN DE EMERGENCIA PARA CREAR ADMINS -->
+            <div id="emergency-reset" style="display:none; margin-top:1.5rem; border-top:1px solid #eee; padding-top:1rem;">
+                <p style="font-size:0.8rem; color:#666; margin-bottom:0.5rem;">¿No recuerdas la clave o es primera instalación?</p>
+                <button class="btn-warning" onclick="emergencyCreateAdmins()">🔧 Resetear/Crear Admins (admin0/admin0)</button>
+            </div>
+
             <div id="connection-failed-msg" style="display:none; margin-top:1rem; text-align:center;">
                 <p style="color: #ef4444; font-weight:bold; margin-bottom:0.5rem;">Error de Conexión</p>
                 <button class="btn-secondary" onclick="openConfigModal()">⚙️ Configurar Conexión</button>
@@ -399,7 +406,7 @@
         let currentStatementFile = null;
         let lastConnectionError = null;
 
-        // --- CREDENCIALES POR DEFECTO (Cámbialas aquí si es necesario) ---
+        // --- CREDENCIALES POR DEFECTO ---
         const DEFAULT_URL = "https://dudwerbbxycvgjetlkng.supabase.co";
         const DEFAULT_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1ZHdlcmJieHljdmdqZXRsa25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwODI1MDIsImV4cCI6MjA0NzY1ODUwMn0.u7_e2YwpgLYN-cmlu7WZ-xK3jy51cDFEcL_RRxav1JA";
 
@@ -411,15 +418,12 @@
         function initSupabase() {
             let url = localStorage.getItem('sb_url');
             let key = localStorage.getItem('sb_key');
-
             if (!url || !key) {
-                // Si no hay guardadas, usar las del código (Defaults)
                 url = DEFAULT_URL;
                 key = DEFAULT_KEY;
                 localStorage.setItem('sb_url', url);
                 localStorage.setItem('sb_key', key);
             }
-
             if(window.supabase) {
                 supabaseClient = window.supabase.createClient(url, key);
                 setTimeout(checkConnection, 1000);
@@ -438,11 +442,7 @@
             document.getElementById('cors-warning').style.display = 'none';
             document.getElementById('config-modal').classList.add('open');
         }
-
-        function closeConfigModal() {
-            document.getElementById('config-modal').classList.remove('open');
-        }
-
+        function closeConfigModal() { document.getElementById('config-modal').classList.remove('open'); }
         function clearCredentials() {
             if(confirm("¿Borrar configuración y volver a los valores por defecto?")) {
                 localStorage.removeItem('sb_url');
@@ -450,7 +450,6 @@
                 location.reload();
             }
         }
-
         function saveConfigAndRetry() {
             const newUrl = document.getElementById('cfg-url').value.trim();
             const newKey = document.getElementById('cfg-key').value.trim();
@@ -461,17 +460,12 @@
             initSupabase();
             setTimeout(checkConnection, 500);
         }
-
         function showConnectionError() {
-            if (lastConnectionError) {
-                openConfigModal();
-            } else {
+            if (lastConnectionError) { openConfigModal(); }
+            else {
                 const status = document.getElementById('connection-status');
-                if(status.classList.contains('connected')) {
-                    alert("La conexión es correcta.");
-                } else {
-                    openConfigModal();
-                }
+                if(status.classList.contains('connected')) alert("La conexión es correcta.");
+                else openConfigModal();
             }
         }
 
@@ -483,14 +477,13 @@
             const errorMsg = document.getElementById('connection-failed-msg');
             const btnLogin = document.getElementById('btn-login');
             const corsWarn = document.getElementById('cors-warning');
+            const emergencyBtn = document.getElementById('emergency-reset');
 
             if(!statusEl || !iconEl || !supabaseClient) {
                 if(statusEl) updateConnectionStatus('disconnected');
                 return;
             }
-
             updateConnectionStatus('connecting');
-
             try {
                 const { data, error } = await supabaseClient.from('config').select('id, monthly_fee').limit(1).single();
                 if (error) throw error;
@@ -499,6 +492,7 @@
                 if(loginForm) loginForm.style.display = 'block';
                 if(errorMsg) errorMsg.style.display = 'none';
                 if(btnLogin) btnLogin.disabled = false;
+                if(emergencyBtn) emergencyBtn.style.display = 'none'; // Ocultar reset si hay conexión
                 lastConnectionError = null;
                 if(corsWarn) corsWarn.style.display = 'none';
 
@@ -511,18 +505,14 @@
             } catch (err) {
                 console.error("Error de conexión:", err);
                 let msg = err.message || "Error desconocido";
-                
-                // Detección de errores comunes
                 if(msg.includes('JWT')) msg = "La API Key es inválida.";
                 if(msg.includes('relation "config" does not exist')) msg = "Falta la tabla 'config' en la BD.";
                 if(msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-                    msg = "Error de Red / CORS. Posible bloqueo del navegador.";
+                    msg = "Error de Red / CORS.";
                     if(corsWarn) corsWarn.style.display = 'block';
                 }
-
                 lastConnectionError = msg;
                 updateConnectionStatus('disconnected');
-                
                 if(loginForm && getComputedStyle(document.getElementById('login-view')).display !== 'none') {
                     loginForm.style.display = 'none';
                     if(errorMsg) errorMsg.style.display = 'block';
@@ -538,41 +528,56 @@
             statusEl.title = status === 'connected' ? 'Conectado' : (status === 'connecting' ? 'Conectando...' : 'Desconectado (Click para arreglar)');
         }
 
-        // --- AUTH MEJORADO ---
+        // --- AUTH MEJORADO CON RESET DE EMERGENCIA ---
         async function handleLogin() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
             if(!user || !pass) return alert("Completa los campos");
             
             try {
-                // Intentar buscar Admin
                 const { data: adminData, error: adminError } = await supabaseClient.from('admins').select('*').eq('username', user).eq('password', pass).maybeSingle();
-                
-                if (adminError) throw adminError; // Error de conexión/permiso
+                if (adminError) throw adminError;
+                if (adminData) { currentUser = { type: 'admin', ...adminData }; showDashboard(); return; }
 
-                if (adminData) { 
-                    currentUser = { type: 'admin', ...adminData }; 
-                    showDashboard(); 
-                    return; 
-                }
-
-                // Intentar buscar Propietario
                 const { data: ownerData, error: ownerError } = await supabaseClient.from('apartments').select('*').eq('usuario', user).eq('clave', pass).maybeSingle();
-                
-                if (ownerError) throw ownerError; // Error de conexión/permiso
+                if (ownerError) throw ownerError;
+                if (ownerData) { currentUser = { type: 'owner', ...ownerData }; showDashboard(); return; }
 
-                if (ownerData) { 
-                    currentUser = { type: 'owner', ...ownerData }; 
-                    showDashboard(); 
-                    return; 
-                }
-
-                // Si llegamos aquí, no hubo error de conexión, pero el usuario no existe
-                alert("⚠️ Usuario o clave incorrectos.\n\nNota: Si estás seguro de que los datos son correctos, es posible que estés conectado a una base de datos vacía o diferente. Haz clic en el ícono de Wi-Fi (rojo) arriba a la derecha para verificar la conexión.");
+                // Si falla el login pero hay conexión, mostrar botón de emergencia
+                document.getElementById('emergency-reset').style.display = 'block';
+                alert("❌ Usuario o clave incorrectos.\n\nSi es la primera vez que usas el sistema o olvidaste la clave, usa el botón amarillo de abajo para resetear los administradores.");
 
             } catch (err) {
                 console.error(err);
-                alert("❌ Error al intentar conectar con la base de datos:\n" + err.message + "\n\nRevisa la configuración de conexión.");
+                alert("❌ Error al conectar:\n" + err.message);
+            }
+        }
+
+        // --- FUNCIÓN DE EMERGENCIA ---
+        async function emergencyCreateAdmins() {
+            if(!confirm("⚠️ ATENCIÓN: Esto borrará los administradores existentes y creará 'admin0', 'admin1' y 'admin2' todos con clave igual al usuario.\n\n¿Continuar?")) return;
+
+            try {
+                // 1. Borrar viejos
+                await supabaseClient.from('admins').delete().neq('username', 'impossible_string_to_delete_all');
+
+                // 2. Insertar nuevos
+                const { error } = await supabaseClient.from('admins').insert([
+                    { username: 'admin0', password: 'admin0', role: 'tesorero', nombre: 'Administrador Principal' },
+                    { username: 'admin1', password: 'admin1', role: 'admin', nombre: 'Administrador 2' },
+                    { username: 'admin2', password: 'admin2', role: 'admin', nombre: 'Administrador 3' }
+                ]);
+
+                if (error) throw error;
+
+                alert("✅ Éxito. Administradores creados.\n\nUsuario: admin0\nClave: admin0");
+                document.getElementById('emergency-reset').style.display = 'none';
+                document.getElementById('username').value = 'admin0';
+                document.getElementById('password').value = 'admin0';
+
+            } catch (err) {
+                console.error(err);
+                alert("❌ Falló la creación automática.\n\nEsto suele pasar por permisos de seguridad (RLS).\n\nSOLUCIÓN: Ve a Supabase -> SQL Editor y ejecuta el script SQL que te di en la respuesta anterior.");
             }
         }
 
