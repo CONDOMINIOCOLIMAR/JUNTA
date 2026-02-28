@@ -161,7 +161,6 @@
         /* ESTILOS CONFIGURACIÓN */
         .config-help { font-size: 0.8rem; color: #666; background: #fffbeb; border: 1px solid #fcd34d; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; }
         .error-log { margin-top: 1rem; font-family: monospace; font-size: 0.8rem; color: #dc2626; background: #fef2f2; padding: 0.5rem; border-radius: 4px; word-break: break-all; display: none;}
-        .cors-warning { font-size: 0.75rem; color: #b91c1c; background: #fef2f2; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; display: none; border: 1px solid #fecaca;}
     </style>
 </head>
 <body>
@@ -169,7 +168,8 @@
     <div class="container">
         <!-- LOGIN -->
         <div id="login-view">
-            <div id="connection-status" class="status-indicator disconnected" onclick="showConnectionError()" title="Clic para ver estado">
+            <!-- Solo se puede configurar haciendo clic en el icono (modo oculto) -->
+            <div id="connection-status" class="status-indicator disconnected" onclick="showConnectionError()" title="Estado de Conexión (Click avanzado)">
                 <i class="ph ph-wifi-slash" id="connection-icon"></i>
             </div>
 
@@ -183,15 +183,15 @@
                 <button class="btn-primary" onclick="handleLogin()" id="btn-login">Ingresar</button>
             </div>
             
-            <!-- BOTÓN DE EMERGENCIA PARA CREAR ADMINS -->
+            <!-- BOTÓN DE EMERGENCIA -->
             <div id="emergency-reset" style="display:none; margin-top:1.5rem; border-top:1px solid #eee; padding-top:1rem;">
                 <p style="font-size:0.8rem; color:#666; margin-bottom:0.5rem;">¿No recuerdas la clave o es primera instalación?</p>
-                <button class="btn-warning" onclick="emergencyCreateAdmins()">🔧 Resetear/Crear Admins (admin0/admin0)</button>
+                <button class="btn-warning" onclick="emergencyCreateAdmins()">🔧 Resetear/Crear Admins</button>
             </div>
 
-            <div id="connection-failed-msg" style="display:none; margin-top:1rem; text-align:center;">
-                <p style="color: #ef4444; font-weight:bold; margin-bottom:0.5rem;">Error de Conexión</p>
-                <button class="btn-secondary" onclick="openConfigModal()">⚙️ Configurar Conexión</button>
+            <!-- Mensaje de error de conexión simplificado -->
+            <div id="connection-failed-msg" style="display:none; margin-top:1rem; text-align:center; color: #ef4444; font-size: 0.9rem;">
+                Error de conexión. Revisa tu internet o recarga la página.
             </div>
         </div>
 
@@ -317,12 +317,12 @@
         </div>
     </div>
 
-    <!-- MODAL CONFIGURACIÓN -->
+    <!-- MODAL CONFIGURACIÓN (OCULTO AL PÚBLICO GENERAL) -->
     <div class="modal-overlay" id="config-modal">
         <div class="modal">
-            <h3>⚙️ Configuración de Conexión</h3>
+            <h3>⚙️ Configuración Avanzada</h3>
             <div class="config-help">
-                Si los usuarios no se encuentran, verifica que la URL y Key correspondan al proyecto donde creaste las tablas <code>admins</code> y <code>apartments</code>.
+                Estas credenciales ya vienen pre-instaladas en el código. Solo cámbialas si el proyecto ha migrado.
             </div>
             
             <div class="input-group">
@@ -331,16 +331,13 @@
             </div>
             <div class="input-group">
                 <label>API Key (public/anon)</label>
-                <input type="password" id="cfg-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                <input type="password" id="cfg-key" placeholder="eyJhbGci...">
             </div>
 
-            <div id="cors-warning" class="cors-warning">
-                ⚠️ Posible error de CORS. Si abres este archivo directamente (file://), intenta usar un servidor local como "Live Server".
-            </div>
             <div id="connection-error-log" class="error-log"></div>
 
             <div class="modal-actions">
-                <button class="btn-danger" onclick="clearCredentials()">Borrar Credenciales</button>
+                <button class="btn-danger" onclick="clearCredentials()">Resetear a por Defecto</button>
                 <button class="btn-logout" onclick="closeConfigModal()">Cancelar</button>
                 <button class="btn-primary" onclick="saveConfigAndRetry()">Guardar y Reconectar</button>
             </div>
@@ -406,9 +403,9 @@
         let currentStatementFile = null;
         let lastConnectionError = null;
 
-        // --- CREDENCIALES POR DEFECTO ---
+        // --- CREDENCIALES PRE-INSTALADAS ---
         const DEFAULT_URL = "https://dudwerbbxycvgjetlkng.supabase.co";
-        const DEFAULT_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1ZHdlcmJieHljdmdqZXRsa25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwODI1MDIsImV4cCI6MjA0NzY1ODUwMn0.u7_e2YwpgLYN-cmlu7WZ-xK3jy51cDFEcL_RRxav1JA";
+        const DEFAULT_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1ZHdlcmJieHljdmdqZXRsa25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwODI1MDIsImV4cCI6MjA4NzY1ODUwMn0.u7_e2YwpgLYN-cmlu7WZ-xK3jy51cDFEcL_RRxav1JA";
 
         document.addEventListener('DOMContentLoaded', () => {
             initSupabase();
@@ -416,14 +413,18 @@
         });
 
         function initSupabase() {
+            // Siempre usamos LocalStorage primero para permitir cambios rápidos por desarrollador
+            // Si está vacío, carga las credenciales pre-instaladas.
             let url = localStorage.getItem('sb_url');
             let key = localStorage.getItem('sb_key');
+            
             if (!url || !key) {
                 url = DEFAULT_URL;
                 key = DEFAULT_KEY;
                 localStorage.setItem('sb_url', url);
                 localStorage.setItem('sb_key', key);
             }
+
             if(window.supabase) {
                 supabaseClient = window.supabase.createClient(url, key);
                 setTimeout(checkConnection, 1000);
@@ -439,12 +440,11 @@
             document.getElementById('cfg-key').value = localStorage.getItem('sb_key') || '';
             document.getElementById('connection-error-log').textContent = lastConnectionError || '';
             document.getElementById('connection-error-log').style.display = lastConnectionError ? 'block' : 'none';
-            document.getElementById('cors-warning').style.display = 'none';
             document.getElementById('config-modal').classList.add('open');
         }
         function closeConfigModal() { document.getElementById('config-modal').classList.remove('open'); }
         function clearCredentials() {
-            if(confirm("¿Borrar configuración y volver a los valores por defecto?")) {
+            if(confirm("¿Borrar configuración y volver a los valores pre-instalados en el código?")) {
                 localStorage.removeItem('sb_url');
                 localStorage.removeItem('sb_key');
                 location.reload();
@@ -476,7 +476,6 @@
             const loginForm = document.getElementById('login-form-wrapper');
             const errorMsg = document.getElementById('connection-failed-msg');
             const btnLogin = document.getElementById('btn-login');
-            const corsWarn = document.getElementById('cors-warning');
             const emergencyBtn = document.getElementById('emergency-reset');
 
             if(!statusEl || !iconEl || !supabaseClient) {
@@ -492,9 +491,8 @@
                 if(loginForm) loginForm.style.display = 'block';
                 if(errorMsg) errorMsg.style.display = 'none';
                 if(btnLogin) btnLogin.disabled = false;
-                if(emergencyBtn) emergencyBtn.style.display = 'none'; // Ocultar reset si hay conexión
+                if(emergencyBtn) emergencyBtn.style.display = 'none'; 
                 lastConnectionError = null;
-                if(corsWarn) corsWarn.style.display = 'none';
 
                 if(data && data.monthly_fee) {
                     currentFee = parseFloat(data.monthly_fee);
@@ -507,10 +505,8 @@
                 let msg = err.message || "Error desconocido";
                 if(msg.includes('JWT')) msg = "La API Key es inválida.";
                 if(msg.includes('relation "config" does not exist')) msg = "Falta la tabla 'config' en la BD.";
-                if(msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-                    msg = "Error de Red / CORS.";
-                    if(corsWarn) corsWarn.style.display = 'block';
-                }
+                if(msg.includes('Failed to fetch') || msg.includes('NetworkError')) msg = "Error de Red / CORS.";
+                
                 lastConnectionError = msg;
                 updateConnectionStatus('disconnected');
                 if(loginForm && getComputedStyle(document.getElementById('login-view')).display !== 'none') {
@@ -525,10 +521,10 @@
             const iconEl = document.getElementById('connection-icon');
             statusEl.className = 'status-indicator ' + status;
             iconEl.className = status === 'connected' ? 'ph ph-wifi-high' : (status === 'connecting' ? 'ph ph-spinner' : 'ph ph-wifi-slash');
-            statusEl.title = status === 'connected' ? 'Conectado' : (status === 'connecting' ? 'Conectando...' : 'Desconectado (Click para arreglar)');
+            statusEl.title = status === 'connected' ? 'Conectado' : (status === 'connecting' ? 'Conectando...' : 'Desconectado (Click avanzado)');
         }
 
-        // --- AUTH MEJORADO CON RESET DE EMERGENCIA ---
+        // --- AUTH ---
         async function handleLogin() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
@@ -543,7 +539,6 @@
                 if (ownerError) throw ownerError;
                 if (ownerData) { currentUser = { type: 'owner', ...ownerData }; showDashboard(); return; }
 
-                // Si falla el login pero hay conexión, mostrar botón de emergencia
                 document.getElementById('emergency-reset').style.display = 'block';
                 alert("❌ Usuario o clave incorrectos.\n\nSi es la primera vez que usas el sistema o olvidaste la clave, usa el botón amarillo de abajo para resetear los administradores.");
 
@@ -555,29 +550,25 @@
 
         // --- FUNCIÓN DE EMERGENCIA ---
         async function emergencyCreateAdmins() {
-            if(!confirm("⚠️ ATENCIÓN: Esto borrará los administradores existentes y creará 'admin0', 'admin1' y 'admin2' todos con clave igual al usuario.\n\n¿Continuar?")) return;
+            if(!confirm("⚠️ ATENCIÓN: Esto restablecerá las claves de admin0, admin1 y admin2 a: (usuario = clave).\n\n¿Continuar?")) return;
 
             try {
-                // 1. Borrar viejos
-                await supabaseClient.from('admins').delete().neq('username', 'impossible_string_to_delete_all');
-
-                // 2. Insertar nuevos
-                const { error } = await supabaseClient.from('admins').insert([
+                const { error } = await supabaseClient.from('admins').upsert([
                     { username: 'admin0', password: 'admin0', role: 'tesorero', nombre: 'Administrador Principal' },
                     { username: 'admin1', password: 'admin1', role: 'admin', nombre: 'Administrador 2' },
                     { username: 'admin2', password: 'admin2', role: 'admin', nombre: 'Administrador 3' }
-                ]);
+                ], { onConflict: 'username' });
 
                 if (error) throw error;
 
-                alert("✅ Éxito. Administradores creados.\n\nUsuario: admin0\nClave: admin0");
+                alert("✅ Éxito. Administradores listos.\n\nUsuario: admin0\nClave: admin0");
                 document.getElementById('emergency-reset').style.display = 'none';
                 document.getElementById('username').value = 'admin0';
                 document.getElementById('password').value = 'admin0';
 
             } catch (err) {
                 console.error(err);
-                alert("❌ Falló la creación automática.\n\nEsto suele pasar por permisos de seguridad (RLS).\n\nSOLUCIÓN: Ve a Supabase -> SQL Editor y ejecuta el script SQL que te di en la respuesta anterior.");
+                alert("❌ Error al restablecer.\n\nDetalle: " + err.message);
             }
         }
 
